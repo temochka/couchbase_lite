@@ -1,0 +1,16 @@
+/.bundle/
+/.idea/
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
+
+# Binary releases of the lib (see spec/support/install_cblite_library.sh)
+/macos
+/unix
+
+# rspec failure tracking
+.rspec_status
