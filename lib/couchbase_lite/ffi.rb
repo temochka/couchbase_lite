@@ -31,6 +31,15 @@ module CouchbaseLite
       layout :buf, :pointer,
              :size, :size_t
 
+      NULL = new.tap do |s|
+        s[:buf] = nil
+        s[:size] = 0
+      end
+
+      def self.null
+        NULL
+      end
+
       def self.from_string(string)
         pointer = ::FFI::MemoryPointer.new(string.bytesize + 1)
         pointer.put_string(0, string)
@@ -94,6 +103,14 @@ module CouchbaseLite
       layout :domain, :C4ErrorDomain,
              :code, :int32,
              :internal_info, :int32
+
+      def domain
+        self[:domain]
+      end
+
+      def code
+        self[:code]
+      end
     end
 
     enum :C4EncryptionAlgorithm,
@@ -206,23 +223,39 @@ module CouchbaseLite
 
     #     C4Revision selectedRev;     ///< Describes the currently-selected revision
     # } C4Document;
-    class C4Document < ::FFI::Struct
+    class C4Document < ::FFI::ManagedStruct
       layout :flags, :uint32,
              :docID, C4String,
              :revID, C4String,
              :sequence, :uint64,
              :selectedRev, C4Revision
 
+      def self.release(ptr)
+        FFI.c4doc_free(ptr)
+      end
+
       def id
-        self['docID']
+        self[:docID]
       end
 
       def rev
-        self['revID']
+        self[:revID]
       end
 
       def sequence
-        self['sequence']
+        self[:sequence]
+      end
+
+      def flags
+        self[:flags]
+      end
+
+      def mark_for_deletion
+        self[:flags] = flags | C4DOC_DocDeleted
+      end
+
+      def deleted?
+        C4DOC_DocDeleted == (flags & C4DOC_DocDeleted)
       end
     end
 
@@ -486,6 +519,11 @@ module CouchbaseLite
                      :uint8, # revisionFlags
                      C4Error.ptr],
                     C4Document.ptr
+    attach_function :c4doc_save,
+                    [C4Document.ptr,
+                     :uint32,
+                     C4Error.ptr],
+                    :bool
     attach_function :c4doc_get,
                     [:pointer, # database
                      C4String.by_value, # docID

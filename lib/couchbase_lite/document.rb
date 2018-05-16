@@ -1,17 +1,32 @@
 module CouchbaseLite
   class Document
-    attr_reader :id, :rev, :sequence, :attributes
+    include ErrorHandling
 
-    def self.from_native(c4_document)
-      json = blank_err { |e| FFI.c4doc_bodyAsJSON(c4_document, false, e) }
-      new(c4_document.id, c4_document.rev, c4_document.sequence, JSON.parse(json))
+    attr_reader :c4_document
+
+    def initialize(c4_document)
+      @c4_document = c4_document
     end
 
-    def initialize(id, rev, sequence, attributes)
-      @id = id
-      @rev = rev
-      @sequence = sequence
-      @attributes = OpenStruct.new(attributes)
+    def id
+      c4_document.id.to_s
+    end
+
+    def rev
+      c4_document.rev.to_s
+    end
+
+    def sequence
+      c4_document.sequence
+    end
+
+    def body(symbolize_names: true)
+      c4_slice = blank_err { |e| FFI.c4doc_bodyAsJSON(c4_document, false, e)  }
+      JSON.parse(c4_slice.to_s, symbolize_names: symbolize_names)
+    end
+
+    def deleted?
+      c4_document.deleted?
     end
   end
 end

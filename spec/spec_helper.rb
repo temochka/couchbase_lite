@@ -1,6 +1,7 @@
 require 'bundler/setup'
 require 'couchbase_lite'
-
+require 'irb'
+require 'securerandom'
 require 'tmpdir'
 
 RSpec.configure do |config|

@@ -1,6 +1,8 @@
 module CouchbaseLite
   class Database
     extend ErrorHandling
+
+    include Conversions
     include ErrorHandling
 
     def self.open(path)
@@ -23,38 +25,45 @@ module CouchbaseLite
     end
 
     def insert(id, json_body)
-      document = transaction do
+      c4_document = transaction do
         null_err do |e|
           FFI.c4doc_create(c4_database,
                            FFI::C4String.from_string(id),
-                           json_to_fleece(json_body),
+                           json_to_fleece(json(json_body)),
                            0,
                            e)
         end
       end
-      
-      document[:docID].to_s
-    ensure
-      FFI.c4doc_free(document) if document
+
+      Document.new(c4_document)
     end
 
     def get(id)
-      c4_document = get_document(id)
-      
-      Document.from_native(c4_document) if c4_document
-    ensure
-      FFI.c4doc_free(c4_document) if c4_document
+      Document.new(get_document(id))
+    rescue DocumentNotFound
+      nil
     end
 
-    def update(id, json_body)
-      old_doc = get_document(id)
-      doc = transaction do
-        null_err { |e| FFI.c4doc_update(old_doc, json_to_fleece(json_body), 0, e) }
+    def update(document, json_body)
+      old_c4_document = document.is_a?(Document) ? document.c4_document : get_document(document)
+
+      new_c4_document = transaction do
+        null_err do |e|
+          FFI.c4doc_update(old_c4_document, json_to_fleece(json(json_body)), old_c4_document.flags, e)
+        end
       end
-      FFI.c4doc_free(doc) if doc
-      true
-    ensure
-      FFI.c4doc_free(old_doc) if old_doc
+
+      Document.new(new_c4_document)
+    end
+
+    def delete(document)
+      c4_document = document.is_a?(Document) ? document.c4_document : get_document(document)
+      deleted_c4_document = transaction do
+        false_err do |e|
+          FFI.c4doc_update(c4_document, FFI::C4Slice.null, c4_document.flags | FFI::C4DOC_DocDeleted, e)
+        end
+      end
+      Document.new(deleted_c4_document)
     end
 
     def query(text)
@@ -70,7 +79,7 @@ module CouchbaseLite
     def create_index(name, type, expressions)
       raise ArgumentError unless name && !name.empty?
 
-      c4_type = case type
+      c4_type = case type.to_s
                 when 'val'
                   :kC4ValueIndex
                 when 'fts'

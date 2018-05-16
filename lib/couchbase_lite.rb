@@ -4,6 +4,27 @@ require 'json'
 module CouchbaseLite
   class Error < StandardError; end
 
+  class LibraryError < Error
+    attr_reader :c4_error
+
+    def self.for(c4_error)
+      error_class = case [c4_error.domain, c4_error.code]
+                    when [:LiteCoreDomain, 7]
+                      DocumentNotFound
+                    else
+                      self
+                    end
+      error_class.new(c4_error, FFI.c4error_getMessage(c4_error))
+    end
+
+    def initialize(c4_error, message)
+      @c4_error = c4_error
+      super("#{c4_error.domain}(#{c4_error.code}): #{message}")
+    end
+  end
+
+  class DocumentNotFound < LibraryError; end
+
   module ErrorHandling
     private
 
@@ -24,9 +45,9 @@ module CouchbaseLite
     end
 
     def err(reason)
-      error = FFI::C4Error.new
-      result = yield(error)
-      raise Error, FFI.c4error_getMessage(error) if err?(result, reason)
+      c4_error = FFI::C4Error.new
+      result = yield(c4_error)
+      raise LibraryError.for(c4_error) if err?(result, reason)
       result
     end
 
@@ -42,6 +63,16 @@ module CouchbaseLite
         result[:buf].null?
       else
         raise ArgumentError, "Unknown error mode #{reason}"
+      end
+    end
+  end
+
+  module Conversions
+    def json(val)
+      if val.is_a?(String)
+        val
+      else
+        val.to_json
       end
     end
   end
