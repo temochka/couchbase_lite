@@ -287,7 +287,7 @@ module CouchbaseLite
 
     class C4Query
       def self.auto(ptr)
-        ::FFI::AutoPointer.new(ptr) { |ptr| FFI.c4query_free(ptr) }
+        ::FFI::AutoPointer.new(ptr, FFI.method(:c4query_free))
       end
     end
 

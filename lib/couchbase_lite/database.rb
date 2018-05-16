@@ -1,5 +1,7 @@
 module CouchbaseLite
   class Database
+    attr_reader :c4_database
+
     extend ErrorHandling
 
     include Conversions
@@ -66,11 +68,6 @@ module CouchbaseLite
       Document.new(deleted_c4_document)
     end
 
-    def query(text)
-      n1ql = N1ql::Query.new(text)
-      Query.new(self, n1ql.ast, n1ql.titles)
-    end
-
     def register_observer(trigger, observer = nil, &block)
       @observers[trigger] ||= []
       @observers[trigger] << (observer || block)
@@ -99,9 +96,11 @@ module CouchbaseLite
       end
     end
 
-    private
+    def query(titles, ast)
+      Query.new(self, titles, ast)
+    end
 
-    attr_reader :c4_database
+    private
 
     def initialize(c4_database)
       @c4_database = c4_database

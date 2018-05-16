@@ -89,4 +89,27 @@ RSpec.describe CouchbaseLite::Database do
       end
     end
   end
+
+  describe '#create_index' do
+    context 'value index' do
+      subject(:index) { db.create_index('by_foo', :val, [%w(. foo)].to_json) }
+
+      it { is_expected.to be true }
+    end
+
+    context 'full-text index' do
+      subject(:index) { db.create_index('by_foo', :fts, [%w(. foo)].to_json) }
+
+      it { is_expected.to be true }
+    end
+  end
+
+  describe '#query' do
+    subject(:query) { db.query(%w(foo), select: [%w(. foo)]) }
+
+    it { is_expected.to be_a(CouchbaseLite::Query) }
+    specify { expect(query.db).to eq(db) }
+    specify { expect(query.titles).to eq(%w(foo)) }
+    specify { expect(query.ast).to eq({ select: [%w(. foo)] }.to_json) }
+  end
 end
