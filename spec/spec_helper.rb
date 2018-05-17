@@ -1,5 +1,6 @@
 require 'bundler/setup'
 require 'couchbase_lite'
+require 'couchbase_lite/rspec/contexts'
 require 'irb'
 require 'securerandom'
 require 'tmpdir'

@@ -1,14 +1,14 @@
 require 'spec_helper'
 
 RSpec.describe CouchbaseLite::Database do
-  let(:tmpdir) { Dir.mktmpdir }
+  include_context 'CBLite db'
+
   let(:id) { SecureRandom.hex(8) }
   let(:body) { { foo: 'bar' } }
   let(:revision_prefix) { '1-' }
-  let(:options) { {} }
-  after(:each) { FileUtils.remove_entry_secure(tmpdir) }
+  let(:cblite_db_options) { {} }
 
-  subject(:db) { CouchbaseLite::Database.open(File.join(tmpdir, 'test'), **options) }
+  subject { db }
 
   describe '.open' do
     it { is_expected.to be_a CouchbaseLite::Database }
@@ -135,7 +135,7 @@ RSpec.describe CouchbaseLite::Database do
       let(:queue) { Queue.new }
       let(:async_method) { ->(&block) { queue << block } }
       let(:async_loop) { -> { queue.pop.call } }
-      let(:options) { { async: async_method } }
+      let(:cblite_db_options) { { async: async_method } }
 
       it 'uses provided async method to delay notifications until later' do
         expect(queue.size).to eq 2
