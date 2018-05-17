@@ -5,9 +5,10 @@ RSpec.describe CouchbaseLite::Database do
   let(:id) { SecureRandom.hex(8) }
   let(:body) { { foo: 'bar' } }
   let(:revision_prefix) { '1-' }
+  let(:options) { {} }
   after(:each) { FileUtils.remove_entry_secure(tmpdir) }
 
-  subject(:db) { CouchbaseLite::Database.open(File.join(tmpdir, 'test')) }
+  subject(:db) { CouchbaseLite::Database.open(File.join(tmpdir, 'test'), **options) }
 
   describe '.open' do
     it { is_expected.to be_a CouchbaseLite::Database }
@@ -111,5 +112,38 @@ RSpec.describe CouchbaseLite::Database do
     specify { expect(query.db).to eq(db) }
     specify { expect(query.titles).to eq(%w(foo)) }
     specify { expect(query.ast).to eq({ select: [%w(. foo)] }.to_json) }
+  end
+
+  describe '#add_observer' do
+    let(:notifications) { [] }
+    let(:observer) { ->(event) { notifications << event } }
+
+    before do
+      db.add_observer(observer, :call)
+      doc = db.insert(id, body)
+      db.delete(doc)
+    end
+
+    context 'standard async method' do
+      it 'synchronously notifies observers on every commit' do
+        expect(notifications.count).to eq 2
+        expect(notifications.uniq).to eq %i(commit)
+      end
+    end
+
+    context 'custom async method' do
+      let(:queue) { Queue.new }
+      let(:async_method) { ->(&block) { queue << block } }
+      let(:async_loop) { -> { queue.pop.call } }
+      let(:options) { { async: async_method } }
+
+      it 'uses provided async method to delay notifications until later' do
+        expect(queue.size).to eq 2
+        2.times do
+          expect { async_loop.call }.to change { notifications.size }.by(1)
+        end
+        expect(notifications.uniq).to eq %i(commit)
+      end
+    end
   end
 end

@@ -6,8 +6,9 @@ module CouchbaseLite
 
     include Conversions
     include ErrorHandling
+    include Observable
 
-    def self.open(path)
+    def self.open(path, **kwargs)
       path = FFI::C4String.from_string(path)
       key = FFI::C4EncryptionKey.new
       key[:algorithm] = :kC4EncryptionNone
@@ -19,7 +20,7 @@ module CouchbaseLite
       ptr = null_err { |e| FFI.c4db_open(path, config, e) }
       auto_ptr = FFI::C4Database.auto(ptr)
 
-      new(auto_ptr)
+      new(auto_ptr, **kwargs)
     end
 
     def close
@@ -68,11 +69,6 @@ module CouchbaseLite
       Document.new(deleted_c4_document)
     end
 
-    def register_observer(trigger, observer = nil, &block)
-      @observers[trigger] ||= []
-      @observers[trigger] << (observer || block)
-    end
-
     def create_index(name, type, expressions)
       raise ArgumentError unless name && !name.empty?
 
@@ -102,9 +98,9 @@ module CouchbaseLite
 
     private
 
-    def initialize(c4_database)
+    def initialize(c4_database, async: ->(&block) { block.call })
       @c4_database = c4_database
-      @observers = {}
+      @async = async
     end
 
     def transaction(persist = true)
@@ -113,12 +109,14 @@ module CouchbaseLite
         yield
       ensure
         false_err { |e| FFI::c4db_endTransaction(c4_database, persist, e) }
-        notify_observers(:commit)
-      end
-    end
 
-    def notify_observers(action)
-      @observers.fetch(action, []).each(&:call)
+        @async.call do
+          changed
+          notify_observers(:commit)
+        end
+
+        true
+      end
     end
 
     def json_to_fleece(json)

@@ -1,5 +1,6 @@
 require 'ffi'
 require 'json'
+require 'observer'
 
 module CouchbaseLite
   class Error < StandardError; end
