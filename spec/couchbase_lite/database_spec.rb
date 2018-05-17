@@ -106,7 +106,7 @@ RSpec.describe CouchbaseLite::Database do
   end
 
   describe '#query' do
-    subject(:query) { db.query(%w(foo), select: [%w(. foo)]) }
+    subject(:query) { db.query(%w(foo), what: [%w(. foo)]) }
 
     it { is_expected.to be_a(CouchbaseLite::Query) }
     specify { expect(query.db).to eq(db) }

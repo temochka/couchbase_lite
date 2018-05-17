@@ -310,14 +310,14 @@ module CouchbaseLite
     #     /** Array with details of each full-text match */
     #     const C4FullTextMatch *fullTextMatches;
     # } C4QueryEnumerator;
-    class C4QueryEnumerator < ::FFI::Struct
+    class C4QueryEnumerator < ::FFI::ManagedStruct
       layout :columns, FLArrayIterator,
              :missingColumns, :uint64,
              :fullTextMatchCount, :uint32,
              :fullTextMatches, :pointer
 
-      def self.auto(ptr)
-        ::FFI::AutoPointer.new(ptr) { |p| FFI.c4queryenum_free(ptr) }
+      def self.release(ptr)
+        FFI.c4queryenum_free(ptr)
       end
     end
 
