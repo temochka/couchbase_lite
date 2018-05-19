@@ -3,6 +3,7 @@ require 'couchbase_lite'
 require 'couchbase_lite/rspec/contexts'
 require 'couchbase_lite/rspec/matchers'
 require 'irb'
+require 'n1ql'
 require 'securerandom'
 require 'tmpdir'
 

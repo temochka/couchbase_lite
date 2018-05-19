@@ -2,10 +2,14 @@ require 'rspec/expectations'
 require 'pp'
 
 RSpec::Matchers.define :select_records do |expected|
+  diffable
+
   match do |query|
-    @actual = query.run.to_a
+    @actual = query.run(@arguments || {}).to_a
     expected == @actual
   end
 
-  diffable
+  chain :with_arguments do |arguments|
+    @arguments = arguments
+  end
 end
