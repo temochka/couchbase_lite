@@ -34,32 +34,58 @@ RSpec.describe CouchbaseLite::Query do
   end
 
   describe 'select' do
-    include_context 'simple dataset'
+    context 'without joins' do
+      include_context 'simple dataset'
 
-    it 'returns matching records' do
-      expect(n1ql('SELECT foo._id AS id, foo.* AS doc FROM foo')).
-        to select_records(records.map { |r| { 'id' => r['number'].to_s, 'doc' => r } })
+      it 'returns matching records' do
+        expect(n1ql('SELECT foo._id AS id, foo.* AS doc FROM foo')).
+          to select_records(records.map { |r| { 'id' => r['number'].to_s, 'doc' => r } })
 
-      expect(n1ql('SELECT number WHERE flag_odd=true')).
-        to select_records(Array.new(n / 2) { |i| { 'number' => i * 2 + 1 } })
+        expect(n1ql('SELECT number WHERE flag_odd=true')).
+          to select_records(Array.new(n / 2) { |i| { 'number' => i * 2 + 1 } })
 
-      expect(n1ql('SELECT MAX(number) as max WHERE flag_odd=false')).
-        to select_records([{ 'max' => n.odd? ? n - 1 : n - 2 }])
+        expect(n1ql('SELECT MAX(number) as max WHERE flag_odd=false')).
+          to select_records([{ 'max' => n.odd? ? n - 1 : n - 2 }])
 
-      expect(n1ql('SELECT number WHERE string LIKE $pattern')).
-        to select_records([{ 'number' => n - 1 }]).
-          with_arguments(pattern: "%_#{n - 1}")
+        expect(n1ql('SELECT number WHERE string LIKE $pattern')).
+          to select_records([{ 'number' => n - 1 }]).
+            with_arguments(pattern: "%_#{n - 1}")
 
-      # OFFSET AND LIMIT
-      expect(n1ql("SELECT number LIMIT $limit")).
-        to select_records((0...(n / 2)).map { |i| { 'number' => i } }).
-          with_arguments(limit: n / 2)
-      expect(n1ql("SELECT number LIMIT $limit OFFSET $offset")).
-        to select_records(((n / 2)...n).map { |i| { 'number' => i } }).
-          with_arguments(limit: n / 2, offset: n / 2)
-      expect(n1ql("SELECT number ORDER BY number DESC LIMIT $limit")).
-        to select_records((10..19).to_a.reverse.map { |i| { 'number' => i } }).
-          with_arguments(limit: n / 2)
+        # OFFSET AND LIMIT
+        expect(n1ql("SELECT number LIMIT $limit")).
+          to select_records((0...(n / 2)).map { |i| { 'number' => i } }).
+            with_arguments(limit: n / 2)
+        expect(n1ql("SELECT number LIMIT $limit OFFSET $offset")).
+          to select_records(((n / 2)...n).map { |i| { 'number' => i } }).
+            with_arguments(limit: n / 2, offset: n / 2)
+        expect(n1ql("SELECT number ORDER BY number DESC LIMIT $limit")).
+          to select_records((10..19).to_a.reverse.map { |i| { 'number' => i } }).
+            with_arguments(limit: n / 2)
+      end
+    end
+
+    context 'with joins' do
+      before do
+        load_dataset('names_100.json')
+        load_dataset('states_titlecase.json')
+      end
+
+      it 'selects count' do
+        text = <<-SQL
+          SELECT
+            person.name.first, state.name
+          FROM
+            person JOIN state ON state.abbreviation = person.contact.address.state
+          WHERE
+            LENGTH(person.name.first) >= 9
+          ORDER BY person.name.first
+        SQL
+
+        expect(n1ql(text)).
+          to select_records([{ 'first' => 'Cleveland', 'name' => 'California' },
+                             { 'first' => 'Georgetta', 'name' => 'Ohio' },
+                             { 'first' => 'Margaretta', 'name' => 'South Dakota' }])
+      end
     end
   end
 

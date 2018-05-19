@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/temochka/n1ql
-  revision: 6b891551b2f0412a0c001fb79bd391ccbcf267a8
+  revision: 9ce6ebe657ebe175a7587c8e9afbf27d96f506a5
   specs:
     n1ql (0.1.0)
       parslet (~> 1.8)

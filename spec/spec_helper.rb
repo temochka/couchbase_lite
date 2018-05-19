@@ -6,10 +6,13 @@ require 'irb'
 require 'n1ql'
 require 'securerandom'
 require 'tmpdir'
+require 'support/helpers'
 
 RSpec.configure do |config|
   config.example_status_persistence_file_path = '.rspec_status'
   config.disable_monkey_patching!
+
+  config.include Helpers
 
   config.expect_with :rspec do |c|
     c.syntax = :expect
