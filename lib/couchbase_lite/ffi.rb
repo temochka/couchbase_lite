@@ -23,13 +23,29 @@ module CouchbaseLite
              :_private4, :pointer
     end
 
+    module C4StringLike
+      def self.included(base)
+        base.class_eval do
+          layout :buf, :pointer,
+                 :size, :size_t
+        end
+      end
+
+      def to_s
+        self[:buf].read_string(self[:size])
+      end
+
+      def to_bytes
+        self[:buf].read_array_of_int8(self[:size])
+      end
+    end
+
     # typedef struct {
     #     const void *buf;
     #     size_t size;
     # } C4Slice;
     class C4Slice < ::FFI::Struct
-      layout :buf, :pointer,
-             :size, :size_t
+      include C4StringLike
 
       NULL = new.tap do |s|
         s[:buf] = nil
@@ -59,19 +75,29 @@ module CouchbaseLite
         s[:size] = bytes.count
         s
       end
+    end
 
-      def to_s
-        self[:buf].read_string(self[:size])
+    C4String = C4Slice
+
+    class C4SliceResult < ::FFI::ManagedStruct
+      include C4StringLike
+
+      def self.release(ptr)
+        FFI.c4slice_free(ptr)
       end
 
-      def to_bytes
-        self[:buf].read_array_of_int8(self[:size])
+      def initialize(ptr)
+        if ptr.is_a?(::FFI::MemoryPointer)
+          # Opt out of auto memory management and use c4slice_free
+          ptr.autorelease = false
+          super(::FFI::Pointer.new(ptr))
+        else
+          super
+        end
       end
     end
 
-    C4SliceResult = C4Slice
-    C4String = C4Slice
-    C4StringResult = C4Slice
+    C4StringResult = C4SliceResult
 
     # // (These are identical to the internal C++ error::Domain enum values.)
     # typedef C4_ENUM(uint32_t, C4ErrorDomain) {
@@ -648,6 +674,10 @@ module CouchbaseLite
     # /** Frees a replicator reference. If the replicator is running it will stop. */
     # void c4repl_free(C4Replicator* repl) C4API;
     attach_function :c4repl_free, [:pointer], :void
+
+    # /** Frees the memory of a heap-allocated slice by calling free(buf). */
+    # void c4slice_free(C4SliceResult) C4API;
+    attach_function :c4slice_free, [C4SliceResult.ptr], :void
 
     # /** One-time registration of socket callbacks. Must be called before using any socket-based
     #     API including the replicator. Do not call multiple times. */
