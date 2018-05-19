@@ -51,6 +51,10 @@ RSpec.describe CouchbaseLite::Query do
           to select_records([{ 'number' => n - 1 }]).
             with_arguments(pattern: "%_#{n - 1}")
 
+        expect(n1ql('SELECT number WHERE ARRAY_COUNT(array)=$n-1')).
+          to select_records([{ 'number' => n - 1 }]).
+            with_arguments(n: n)
+
         # OFFSET AND LIMIT
         expect(n1ql("SELECT number LIMIT $limit")).
           to select_records((0...(n / 2)).map { |i| { 'number' => i } }).

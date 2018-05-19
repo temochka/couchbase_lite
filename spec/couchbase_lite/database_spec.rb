@@ -111,7 +111,7 @@ RSpec.describe CouchbaseLite::Database do
     it { is_expected.to be_a(CouchbaseLite::Query) }
     specify { expect(query.db).to eq(db) }
     specify { expect(query.titles).to eq(%w(foo)) }
-    specify { expect(query.ast).to eq({ select: [%w(. foo)] }.to_json) }
+    specify { expect(query.ast).to eq({ what: [%w(. foo)] }.to_json) }
   end
 
   describe '#add_observer' do
