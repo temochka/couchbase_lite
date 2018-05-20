@@ -88,3 +88,9 @@ require 'couchbase_lite/query_result'
 require 'couchbase_lite/replicator'
 require 'couchbase_lite/replicator_socket'
 require 'couchbase_lite/version'
+
+unless defined?($COUCHBASE_LITE_DEBUG) && $COUCHBASE_LITE_DEBUG
+  CouchbaseLite::FFI::C4LogDomain.all.each do |domain|
+    CouchbaseLite::FFI.c4log_setLevel(domain, :kC4LogNone)
+  end
+end

@@ -1,4 +1,7 @@
 require 'bundler/setup'
+
+$COUCHBASE_LITE_DEBUG = true if ENV['COUCHBASE_LITE_DEBUG'] == '1'
+
 require 'couchbase_lite'
 require 'couchbase_lite/rspec/contexts'
 require 'couchbase_lite/rspec/matchers'

@@ -427,6 +427,43 @@ module CouchbaseLite
              :path, C4String
     end
 
+    # typedef C4_ENUM(int8_t, C4LogLevel) {
+    #   kC4LogDebug,
+    #     kC4LogVerbose,
+    #     kC4LogInfo,
+    #     kC4LogWarning,
+    #     kC4LogError,
+    #     kC4LogNone
+    # };
+    enum :C4LogLevel, %i(kC4LogVerbose kC4LogInfo kC4LogWarning kC4LogError kC4LogNone)
+
+    # /** A log domain, a specific source of logs that can be enabled or disabled. */
+    # typedef struct c4LogDomain *C4LogDomain;
+    #
+    # CBL_CORE_API extern const C4LogDomain
+    #     kC4DefaultLog,                  ///< The default log domain
+    #     kC4DatabaseLog,                 ///< Log domain for database operations
+    #     kC4QueryLog,                    ///< Log domain for query operations
+    #     kC4SyncLog,                     ///< Log domain for replication operations
+    #     kC4WebSocketLog;                ///< Log domain for WebSocket operations
+    attach_variable :log_domain_default, :kC4DefaultLog, :pointer
+    attach_variable :log_domain_database, :kC4DatabaseLog, :pointer
+    attach_variable :log_domain_query, :kC4QueryLog, :pointer
+    attach_variable :log_domain_sync, :kC4SyncLog, :pointer
+    attach_variable :log_domain_web_socket, :kC4WebSocketLog, :pointer
+
+    class C4LogDomain
+      DEFAULT = FFI.log_domain_default
+      DATABASE = FFI.log_domain_database
+      QUERY = FFI.log_domain_query
+      SYNC = FFI.log_domain_sync
+      WEB_SOCKET = FFI.log_domain_web_socket
+
+      def self.all
+        [DEFAULT, DATABASE, QUERY, SYNC, WEB_SOCKET]
+      end
+    end
+
     class C4Replicator
       def self.auto(ptr)
         ::FFI::AutoPointer.new(ptr) { |p| FFI.c4repl_free(p) }
@@ -559,6 +596,17 @@ module CouchbaseLite
                     C4Document.ptr
     attach_function :c4doc_free,
                     [C4Document.ptr],
+                    :void
+
+    # /** Changes the level of the given log domain.
+    #     This setting is global to the entire process.
+    #     Logging is further limited by the levels assigned to the current callback and/or binary file.
+    #       For example, if you set the Foo domain's level to Verbose, and the current log callback is
+    #     at level Warning while the binary file is at Verbose, then verbose Foo log messages will be
+    #     written to the file but not to the callback. */
+    # void c4log_setLevel(C4LogDomain c4Domain C4NONNULL, C4LogLevel level) C4API;
+    attach_function :c4log_setLevel,
+                    [:pointer, :C4LogLevel],
                     :void
 
     attach_function :flarrayiter_get_value,
