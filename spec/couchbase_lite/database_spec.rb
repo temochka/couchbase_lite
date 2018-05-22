@@ -109,7 +109,7 @@ RSpec.describe CouchbaseLite::Database do
     subject(:query) { db.query(%w(foo), what: [%w(. foo)]) }
 
     it { is_expected.to be_a(CouchbaseLite::Query) }
-    specify { expect(query.db).to eq(db) }
+    specify { expect(query.database).to eq(db) }
     specify { expect(query.titles).to eq(%w(foo)) }
     specify { expect(query.ast).to eq({ what: [%w(. foo)] }.to_json) }
   end

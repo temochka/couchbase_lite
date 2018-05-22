@@ -1,23 +1,33 @@
 module CouchbaseLite
   class LiveResult
-    attr_reader :first_result
+    attr_reader :database, :result, :callback
 
-    def initialize(first_result)
-      @first_result = first_result
-      @queue = EM::Queue.new
+    def initialize(database, first_result, &block)
+      @result = first_result
+      @database = database
+      @callback = block
+      database.add_observer(self, :update)
+      fire
     end
 
-    def push(val)
-      @queue.push(val)
+    def destroy
+      database.delete_observer(self)
     end
 
-    def on_update
-      callback = proc do |result|
-        yield result
-        @queue.pop(&callback)
-      end
+    def update(event)
+      return unless event == :commit
 
-      @queue.pop(&callback)
+      refreshed = @result.refresh
+      return if refreshed == @result
+
+      @result = refreshed
+      fire
+    end
+
+    private
+
+    def fire
+      callback.call(@result) if callback
     end
   end
 end

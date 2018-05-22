@@ -13,7 +13,7 @@ module CouchbaseLite
     def refresh
       e = FFI::C4Error.new
       new_ptr = FFI.c4queryenum_refresh(@c4_enumerator, e)
-      return if new_ptr.null?
+      return self if new_ptr.null?
       self.class.new(query, new_ptr)
     end
 
@@ -25,9 +25,17 @@ module CouchbaseLite
       enumerator.next
     end
 
+    def each(&block)
+      enumerator.each(&block)
+    end
+
     def size
       error = FFI::C4Error.new
       FFI.c4queryenum_getRowCount(@c4_enumerator, error)
+    end
+
+    def live(&block)
+      LiveResult.new(query.database, self, &block)
     end
 
     protected

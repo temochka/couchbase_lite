@@ -3,15 +3,15 @@ module CouchbaseLite
     include Conversions
     include ErrorHandling
 
-    attr_accessor :db, :ast, :titles
+    attr_accessor :database, :ast, :titles
 
-    def initialize(db, titles, ast)
-      @db = db
+    def initialize(database, titles, ast)
+      @database = database
       @titles = titles
       @ast = json(ast)
 
       c4_query_ptr = null_err do |e|
-        FFI.c4query_new(db.c4_database,
+        FFI.c4query_new(database.c4_database,
                         FFI::C4String.from_string(@ast),
                         e)
       end

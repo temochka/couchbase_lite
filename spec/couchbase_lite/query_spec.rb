@@ -3,28 +3,6 @@ require 'spec_helper'
 RSpec.describe CouchbaseLite::Query do
   include_context 'CBLite db'
 
-  def query(titles, ast)
-    db.query(titles, ast)
-  end
-
-  def n1ql(text)
-    q = N1ql::Query.new(text)
-    query(q.titles, q.ast)
-  end
-
-  shared_context 'simple dataset' do
-    let(:n) { 20 }
-    let(:records) do
-      Array.new(n) do |i|
-        { 'number' => i, 'flag_odd' => i.odd?, 'string' => "name_#{i}", 'array' => Array.new(i) { i } }
-      end
-    end
-
-    before do
-      records.each_with_index { |r, i| db.insert(i.to_s, r) }
-    end
-  end
-
   describe 'select constant' do
     include_context 'simple dataset'
 
