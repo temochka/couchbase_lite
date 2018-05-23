@@ -1,18 +1,23 @@
 require 'tmpdir'
 
-RSpec.shared_context 'CBLite db' do
-  let(:_tmp_dir) { Dir.mktmpdir }
+RSpec.shared_context 'CBLite db' do |name|
+  let(:"_tmp_dir#{name}") { Dir.mktmpdir }
+
   let(:cblite_db_options) { {} }
-  let(:db) { CouchbaseLite::Database.open(File.join(_tmp_dir, 'test'), **cblite_db_options) }
+  let(name) { CouchbaseLite::Database.open(File.join(send(:"_tmp_dir#{name}"), 'test'), **cblite_db_options) }
 
   around(:example) do |ex|
     begin
-      db
+      send(name)
       ex.run
     ensure
-      FileUtils.remove_entry_secure(_tmp_dir)
+      FileUtils.remove_entry_secure(send(:"_tmp_dir#{name}"))
     end
   end
+end
+
+RSpec.shared_context 'CBLite db test' do
+  include_context 'CBLite db', :db
 
   def query(titles, ast)
     db.query(titles, ast)
@@ -25,6 +30,7 @@ RSpec.shared_context 'CBLite db' do
       _query(q.titles, q.ast)
     end
   end
+
 end
 
 RSpec.shared_context 'simple dataset' do |size = 20|

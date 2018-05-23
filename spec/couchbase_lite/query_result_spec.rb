@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe CouchbaseLite::QueryResult do
-  include_context 'CBLite db'
+  include_context 'CBLite db test'
   include_context 'simple dataset'
 
   let(:id) { '1' }

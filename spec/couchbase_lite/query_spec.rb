@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe CouchbaseLite::Query do
-  include_context 'CBLite db'
+  include_context 'CBLite db test'
 
   describe 'select constant' do
     include_context 'simple dataset'

@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe CouchbaseLite::Database do
-  include_context 'CBLite db'
+  include_context 'CBLite db test'
 
   let(:id) { SecureRandom.hex(8) }
   let(:body) { { foo: 'bar' } }
