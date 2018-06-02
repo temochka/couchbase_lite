@@ -19,15 +19,15 @@ end
 RSpec.shared_context 'CBLite db test' do
   include_context 'CBLite db', :db
 
-  def query(titles, ast)
-    db.query(titles, ast)
+  def query(titles, ast, database = db)
+    database.query(titles, ast)
   end
   alias_method :_query, :query
 
   if defined?(N1ql)
-    def n1ql(text)
+    def n1ql(text, database = db)
       q = N1ql::Query.new(text)
-      _query(q.titles, q.ast)
+      _query(q.titles, q.ast, database)
     end
   end
 

@@ -464,9 +464,114 @@ module CouchbaseLite
       end
     end
 
+
+    # /** Represents an open bidirectional byte stream (typically a TCP socket.)
+    #     C4Socket is allocated and freed by LiteCore, but the client can associate it with a native
+    #     stream/socket (like a file descriptor or a Java stream reference) by storing a value in its
+    #     `nativeHandle` field. */
+    # typedef struct C4Socket {
+    #     void* nativeHandle;     ///< for client's use
+    # } C4Socket;
+    class C4Socket < ::FFI::Struct
+      layout :nativeHandle, RubyObjectRef.ptr
+    end
+
+    # /** The type of message framing that should be applied to the socket's data (added to outgoing,
+    #     parsed out of incoming.) */
+    # typedef C4_ENUM(uint8_t, C4SocketFraming) {
+    #     kC4WebSocketClientFraming,  ///< Frame as WebSocket client messages (masked)
+    #     kC4NoFraming,               ///< No framing; use messages as-is
+    #     kC4WebSocketServerFraming,  ///< Frame as WebSocket server messages (not masked)
+    # };
+    enum ::FFI::NativeType::UINT8,
+         :C4SocketFraming,
+         %i(kC4WebSocketClientFraming kC4NoFraming kC4WebSocketServerFraming)
+
+    # /** A group of callbacks that define the implementation of sockets; the client must fill this
+    #     out and pass it to c4socket_registerFactory() before using any socket-based API.
+    #     These callbacks will be invoked on arbitrary background threads owned by LiteCore.
+    #     They should return quickly, and perform the operation asynchronously without blocking.
+    #
+    #     The `providesWebSockets` flag indicates whether this factory provides a WebSocket
+    #     implementation or just a raw TCP socket. */
+    # typedef struct {
+    #     /** This should be set to `true` if the socket factory acts as a stream of messages,
+    #         `false` if it's a byte stream. */
+    #     C4SocketFraming framing;
+    #
+    #     /** An arbitrary value that will be passed to the `open` callback. */
+    #     void* context;
+    #
+    #     /** Called to open a socket to a destination address, asynchronously.
+    #         @param socket  A new C4Socket instance to be opened. Its `nativeHandle` will be NULL;
+    #                        the implementation of this function will probably store a native socket
+    #                        reference there. This function should return immediately instead of
+    #                        waiting for the connection to open. */
+    #     void (*open)(C4Socket* socket C4NONNULL,
+    #                  const C4Address* addr C4NONNULL,
+    #                  C4Slice options,
+    #                  void *context);
+    #
+    #     /** Called to write to the socket. If `providesWebSockets` is true, the data is a complete
+    #         message, and the socket implementation is responsible for framing it;
+    #         if `false`, it's just raw bytes to write to the stream, including the necessary framing.
+    #         @param socket  The socket to write to.
+    #         @param allocatedData  The data/message to send. As this is a `C4SliceResult`, the
+    #             implementation of this function is responsible for freeing it when done. */
+    #     void (*write)(C4Socket* socket C4NONNULL, C4SliceResult allocatedData);
+    #
+    #     /** Called to inform the socket that LiteCore has finished processing the data from a
+    #         `c4socket_received()` call. This can be used for flow control.
+    #         @param socket  The socket that whose incoming data was processed.
+    #         @param byteCount  The number of bytes of data processed (the size of the `data`
+    #             slice passed to a `c4socket_received()` call.) */
+    #     void (*completedReceive)(C4Socket* socket C4NONNULL, size_t byteCount);
+    #
+    #     /** Called to close the socket.  This is only called if `providesWebSockets` is false, i.e.
+    #         the socket operates at the byte level. Otherwise it may be left NULL.
+    #         No more write calls will be made; the socket should process any remaining incoming bytes
+    #         by calling `c4socket_received()`, then call `c4socket_closed()` when the socket closes.
+    #         @param socket  The socket to close. */
+    #     void (*close)(C4Socket* socket C4NONNULL);
+    #
+    #     /** Called to close the socket.  This is only called if `providesWebSockets` is true, i.e.
+    #         the socket operates at the message level.  Otherwise it may be left NULL.
+    #         The implementation should send a message that tells the remote peer that it's closing
+    #         the connection, then wait for acknowledgement before closing.
+    #         No more write calls will be made; the socket should process any remaining incoming
+    #         messages by calling `c4socket_received()`, then call `c4socket_closed()` when the
+    #         connection closes.
+    #         @param socket  The socket to close. */
+    #     void (*requestClose)(C4Socket* socket C4NONNULL, int status, C4String message);
+    #
+    #     /** Called to tell the client that a `C4Socket` object is being disposed/freed after it's
+    #         closed. The implementation of this function can then dispose any state associated with
+    #         the `nativeHandle`.
+    #         Set this to NULL if you don't need the call.
+    #         @param socket  The socket being disposed.  */
+    #     void (*dispose)(C4Socket* socket C4NONNULL);
+    # } C4SocketFactory;
+    callback :on_socket_open, [C4Socket.ptr, C4Address.ptr, C4Slice.by_value, RubyObjectRef.ptr], :void
+    callback :on_socket_write, [C4Socket.ptr, C4SliceResult.by_value], :void
+    callback :on_socket_completed_receive, [C4Socket.ptr, :size_t], :void
+    callback :on_socket_close, [C4Socket.ptr], :void
+    callback :on_socket_request_close, [C4Socket.ptr, :int, C4String.by_value], :void
+    callback :on_socket_dispose, [C4Socket.ptr], :void
+
+    class C4SocketFactory < ::FFI::Struct
+      layout :framing, :C4SocketFraming,
+             :context, RubyObjectRef.ptr,
+             :open, :on_socket_open,
+             :write, :on_socket_write,
+             :completedReceive, :on_socket_completed_receive,
+             :close, :on_socket_close,
+             :requestClose, :on_socket_request_close,
+             :dispose, :on_socket_dispose
+    end
+
     class C4Replicator
       def self.auto(ptr)
-        ::FFI::AutoPointer.new(ptr) { |p| FFI.c4repl_free(p) }
+        ::FFI::AutoPointer.new(ptr, FFI.method(:c4repl_free))
       end
     end
 
@@ -496,58 +601,44 @@ module CouchbaseLite
              :validationFunc, :pointer,
              :onStatusChanged, :pointer,
              :onDocumentError, :pointer,
-             :callbackContext, :pointer
+             :callbackContext, :pointer,
+             :socketFactory, C4SocketFactory.ptr
     end
 
-    # /** Represents an open bidirectional byte stream (typically a TCP socket.)
-    #     C4Socket is allocated and freed by LiteCore, but the client can associate it with a native
-    #     stream/socket (like a file descriptor or a Java stream reference) by storing a value in its
-    #     `nativeHandle` field. */
-    # typedef struct C4Socket {
-    #     void* nativeHandle;     ///< for client's use
-    # } C4Socket;
-    class C4Socket < ::FFI::Struct
-      layout :nativeHandle, RubyObjectRef.ptr
-    end
+    # /** The possible states of a replicator. */
+    # typedef C4_ENUM(int32_t, C4ReplicatorActivityLevel) {
+    #     kC4Stopped,     ///< Finished, or got a fatal error.
+    #     kC4Offline,     ///< Not used by LiteCore; for use by higher-level APIs. */
+    #     kC4Connecting,  ///< Connection is in progress.
+    #     kC4Idle,        ///< Continuous replicator has caught up and is waiting for changes.
+    #     kC4Busy         ///< Connected and actively working.
+    # };
+    enum :C4ReplicatorActivityLevel, %i(kC4Stopped kC4Offline kC4Connecting kC4Idle kC4Busy)
 
-    # /** A group of callbacks that define the implementation of sockets; the client must fill this
-    #     out and pass it to c4socket_registerFactory() before using any socket-based API.
-    #     These callbacks will be invoked on arbitrary background threads owned by LiteCore.
-    #     They should return quickly, and perform the operation asynchronously without blocking.
-    #     The `providesWebSockets` flag indicates whether this factory provides a WebSocket
-    #     implementation or just a raw TCP socket. */
+    # /** Represents the current progress of a replicator.
+    #     The `units` fields should not be used directly, but divided (`unitsCompleted`/`unitsTotal`)
+    #     to give a _very_ approximate progress fraction. */
     # typedef struct {
-    #     bool providesWebSockets;
+    #     uint64_t    unitsCompleted;     ///< Abstract number of work units completed so far
+    #     uint64_t    unitsTotal;         ///< Total number of work units (a very rough approximation)
+    #     uint64_t    documentCount;      ///< Number of documents transferred so far
+    # } C4Progress;
+    class C4Progress < ::FFI::Struct
+      layout :unitsCompleted, :uint64,
+             :unitsTotal, :uint64,
+             :documentCount, :uint64
+    end
 
-    #     void (*open)(C4Socket* C4NONNULL, const C4Address* C4NONNULL, C4Slice optionsFleece); ///< open the socket
-    #     void (*write)(C4Socket* C4NONNULL, C4SliceResult allocatedData);  ///< Write bytes; free when done
-    #     void (*completedReceive)(C4Socket* C4NONNULL, size_t byteCount);  ///< Completion of c4socket_received
-
-    #     // Only called if providesWebSockets is false:
-    #     void (*close)(C4Socket* C4NONNULL);                               ///< close the socket
-
-    #     // Only called if providesWebSockets is true:
-    #     void (*requestClose)(C4Socket* C4NONNULL, int status, C4String message);
-
-    #     /** Called to tell the client to dispose any state associated with the `nativeHandle`.
-    #         Set this to NULL if you don't need the call. */
-    #     void (*dispose)(C4Socket* C4NONNULL);
-    # } C4SocketFactory;
-    callback :on_socket_open, [C4Socket.ptr, C4Address.ptr, C4Slice.by_value], :void
-    callback :on_socket_write, [C4Socket.ptr, C4SliceResult.by_value], :void
-    callback :on_socket_completed_receive, [C4Socket.ptr, :size_t], :void
-    callback :on_socket_close, [C4Socket.ptr], :void
-    callback :on_socket_request_close, [C4Socket.ptr, :int, C4String.by_value], :void
-    callback :on_socket_dispose, [C4Socket.ptr], :void
-
-    class C4SocketFactory < ::FFI::Struct
-      layout :providesWebSockets, :bool,
-             :open, :on_socket_open,
-             :write, :on_socket_write,
-             :completedReceive, :on_socket_completed_receive,
-             :close, :on_socket_close,
-             :requestClose, :on_socket_request_close,
-             :dispose, :on_socket_dispose
+    # /** Current status of replication. Passed to `C4ReplicatorStatusChangedCallback`. */
+    # typedef struct {
+    #   C4ReplicatorActivityLevel level;
+    #   C4Progress progress;
+    #   C4Error error;
+    # } C4ReplicatorStatus;
+    class C4ReplicatorStatus < ::FFI::Struct
+      layout :level, :C4ReplicatorActivityLevel,
+             :progress, C4Progress,
+             :error, C4Error
     end
 
     attach_function :c4db_open, [C4String.by_value, C4DatabaseConfig.ptr, C4Error.ptr], :pointer
@@ -699,6 +790,12 @@ module CouchbaseLite
                      C4ReplicatorParameters.by_value,
                      C4Error.ptr],
                     :pointer
+
+    # /** Returns the current state of a replicator. */
+    # C4ReplicatorStatus c4repl_getStatus(C4Replicator *repl C4NONNULL) C4API;
+    attach_function :c4repl_getStatus,
+                    [:pointer],
+                    C4ReplicatorStatus.by_value
 
     # /** A simple URL parser that populates a C4Address from a URL string.
     #     The fields of the address will point inside the url string.

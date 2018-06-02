@@ -5,6 +5,9 @@ require 'observer'
 module CouchbaseLite
   class Error < StandardError; end
 
+  class ReplicationError < Error; end
+  class TooManyReplications < ReplicationError; end
+
   class LibraryError < Error
     attr_reader :c4_error
 
@@ -85,8 +88,6 @@ require 'couchbase_lite/ffi'
 require 'couchbase_lite/live_result'
 require 'couchbase_lite/query'
 require 'couchbase_lite/query_result'
-require 'couchbase_lite/replicator'
-require 'couchbase_lite/replicator_socket'
 require 'couchbase_lite/version'
 
 unless defined?($COUCHBASE_LITE_DEBUG) && $COUCHBASE_LITE_DEBUG
