@@ -2,47 +2,41 @@ require 'couchbase_lite/replicator_socket'
 
 module CouchbaseLite
   class ReplicatorSocketFactory
-    OPEN_REQUEST = proc do |c4_socket, c4_address, _c4_slice, context|
+    OPEN_REQUEST = lambda do |c4_socket, c4_address, _c4_slice, context|
       begin
-        puts "couchbase:open -> #{c4_address.to_s}"
-        uri = URI::Generic.build(scheme: c4_address[:scheme].to_s,
-                                 host: c4_address[:hostname].to_s,
-                                 port: c4_address[:port],
-                                 path: c4_address[:path].to_s)
-        faye_socket = Faye::WebSocket::Client.new(uri.to_s)
+        return if !c4_socket[:nativeHandle].null?
+        uri = c4_address.to_s
+        CouchbaseLite.logger.info("replicator:connect - #{uri}")
+        faye_socket = Faye::WebSocket::Client.new(uri)
         factory = context.deref
         factory.sockets << ReplicatorSocket.new(faye_socket, c4_socket)
-        nil
       rescue => e
-        puts "Unexpected error #{e.class}: #{e.message}"
+        CouchbaseLite.logger.error("replicator:connect - #{e.class}: #{e.message}")
+        CouchbaseLite.logger.debug(e)
       end
     end
 
     WRITE_REQUEST = proc do |c4_socket, c4_slice|
       begin
-        puts "couchbase:write (#{c4_slice.to_s}, size: #{c4_slice[:size]})"
+        CouchbaseLite.logger.debug("replicator:write - #{c4_slice[:size]} bytes")
         replication_socket = c4_socket[:nativeHandle].deref
         replication_socket.faye_socket.send(c4_slice.to_bytes)
       rescue => e
-        puts "Unexpected error #{e.class}: #{e.message}"
-        puts "#{e.backtrace.join("\n")}"
+        CouchbaseLite.logger.error("replicator:write - #{e.class}: #{e.message}")
+        CouchbaseLite.logger.debug(e)
       end
     end
 
-    COMPLETED_RECEIVE_REQUEST = proc do |c4_socket, bytes|
-      puts "couchbase:received (#{bytes} bytes)"
+    COMPLETED_RECEIVE_REQUEST = proc do |_c4_socket, bytes|
+      CouchbaseLite.logger.debug("replicator:write_acknowledged - #{bytes} bytes")
     end
 
-    DISPOSE_REQUEST = proc do |c4_socket|
-      puts 'cochbase:dispose'
+    DISPOSE_REQUEST = proc do |_c4_socket|
+      CouchbaseLite.logger.debug('replicator:dispose')
     end
 
-    CLOSE_REQUEST = proc do |c4_socket|
-      puts 'couchbase:close'
-    end
-
-    REQUEST_CLOSE_REQUEST = proc do |c4_socket|
-      puts 'couchbase:request_close'
+    REQUEST_CLOSE_REQUEST = proc do |_c4_socket|
+      CouchbaseLite.logger.debug('couchbase:close')
     end
 
     attr_reader :c4_socket_factory, :sockets
@@ -68,10 +62,9 @@ module CouchbaseLite
     def build_from_rack(env)
       if Faye::WebSocket.websocket?(env)
         faye_socket = Faye::WebSocket.new(env)
-        host = env['REMOTE_ADDR'] == '::1' ? 'localhost' : env['REMOTE_ADDR']
 
         url = URI::Generic.build(scheme: 'ws',
-                                 host: host,
+                                 host: env['REMOTE_ADDR'],
                                  port: env['SERVER_PORT'],
                                  path: env['REQUEST_PATH'])
         ws = ReplicatorSocket.new(faye_socket) { |ref| build(url, ref) }
@@ -92,7 +85,6 @@ module CouchbaseLite
       factory[:open] = OPEN_REQUEST
       factory[:write] = WRITE_REQUEST
       factory[:completedReceive] = COMPLETED_RECEIVE_REQUEST
-      factory[:close] = CLOSE_REQUEST
       factory[:requestClose] = REQUEST_CLOSE_REQUEST
       factory[:dispose] = DISPOSE_REQUEST
       factory

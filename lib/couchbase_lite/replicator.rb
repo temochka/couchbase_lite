@@ -42,15 +42,13 @@ module CouchbaseLite
 
     def start
       c4_repl = if server?
-                  puts 'Creating a replicator for an open socket'
+                  CouchbaseLite.logger.info('replicator:start_server')
                   null_err do |e|
                     FFI.c4repl_newWithSocket(@database.c4_database, @socket.c4_socket, parameters(true), e)
                   end
                 else
-                  puts 'Creating a new replicator'
+                  CouchbaseLite.logger.info('replicator:start_client')
                   address, dbname = FFI::C4Address.from_url(@url)
-
-                  puts "Database: #{dbname.to_s}"
 
                   null_err do |e|
                     FFI.c4repl_new(@database.c4_database, address, dbname, nil, parameters, e)

@@ -1,5 +1,6 @@
 require 'ffi'
 require 'json'
+require 'logger'
 require 'observer'
 
 module CouchbaseLite
@@ -80,6 +81,13 @@ module CouchbaseLite
       end
     end
   end
+
+  class << self
+    def logger
+      @logger ||= Logger.new(STDOUT, level: Logger::ERROR)
+    end
+    attr_writer :logger
+  end
 end
 
 require 'couchbase_lite/database'
@@ -90,7 +98,9 @@ require 'couchbase_lite/query'
 require 'couchbase_lite/query_result'
 require 'couchbase_lite/version'
 
-unless defined?($COUCHBASE_LITE_DEBUG) && $COUCHBASE_LITE_DEBUG
+if defined?($COUCHBASE_LITE_DEBUG) && $COUCHBASE_LITE_DEBUG
+  CouchbaseLite.logger.level = Logger::DEBUG
+else
   CouchbaseLite::FFI::C4LogDomain.all.each do |domain|
     CouchbaseLite::FFI.c4log_setLevel(domain, :kC4LogNone)
   end

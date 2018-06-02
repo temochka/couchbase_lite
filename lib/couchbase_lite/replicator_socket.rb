@@ -15,28 +15,25 @@ module CouchbaseLite
       @faye_socket = faye_socket
       @c4_socket = foreign_c4_socket || (yield @ref)
       @c4_socket[:nativeHandle] = @ref
-      @node = foreign_c4_socket ? 'client' : 'server'
+      log_tag = "[#{foreign_c4_socket ? 'client' : 'server'}##{object_id}]"
 
-      faye_socket.on :open do |event|
-        puts "#{@node}:faye_socket:open -> c4socket_opened(#{object_id})"
+      faye_socket.on :open do |_event|
+        CouchbaseLite.logger.debug("faye:socket_open - #{log_tag}")
         FFI.c4socket_opened(@c4_socket) if foreign_c4_socket
       end
 
       faye_socket.on :error do |event|
-        puts "#{@node}:faye_socket:error -> *stub*"
-        puts "error: #{event.inspect}"
+        CouchbaseLite.logger.error("faye:socket_error - #{log_tag} - #{event.inspect}")
       end
 
       faye_socket.on :message do |event|
-        puts "#{@node}:faye_socket:message -> c4socket_receive"
+        CouchbaseLite.logger.debug("faye:socket_message - #{log_tag} - #{event.data.size} bytes")
         payload = FFI::C4Slice.from_bytes(event.data)
-        puts "#{@node}:received: #{payload} (size: #{payload[:size]})"
         FFI.c4socket_received(@c4_socket, payload)
       end
 
       faye_socket.on :close do |event|
-        puts 'faye_socket:close -> *stub*'
-        # puts [:close, event.code, event.reason]
+        CouchbaseLite.logger.debug("faye_socket_close - #{log_tag} - #{event.code} #{event.reason}")
       end
     end
 

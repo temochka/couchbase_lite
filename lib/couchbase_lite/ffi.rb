@@ -425,6 +425,10 @@ module CouchbaseLite
              :hostname, C4String,
              :port, :uint16,
              :path, C4String
+
+      def to_s
+        FFI.c4address_toURL(self).to_s
+      end
     end
 
     # typedef C4_ENUM(int8_t, C4LogLevel) {
@@ -811,6 +815,12 @@ module CouchbaseLite
                      C4Address.ptr,
                      C4String.ptr],
                     :bool
+
+    # /** Converts a C4Address to a URL. */
+    # C4StringResult c4address_toURL(C4Address address);
+    attach_function :c4address_toURL,
+                    [C4Address.by_value],
+                    C4StringResult.by_value
 
     # /** Tells a replicator to stop. */
     # void c4repl_stop(C4Replicator* repl C4NONNULL) C4API;

@@ -16,7 +16,8 @@ module CouchbaseLite
     end
 
     def call(env)
-      puts "HTTP - #{env['REQUEST_METHOD']} #{env['REQUEST_PATH']} (#{env['REMOTE_ADDR']})"
+      CouchbaseLite.logger.info(
+        "server - #{env['REQUEST_METHOD']} #{env['REQUEST_PATH']} (#{env['REMOTE_ADDR']})")
       ws, response = @socket_factory.build_from_rack(env)
       replicator = CouchbaseLite::Replicator.new(@db_resolver.call(env), socket: ws)
       register(replicator)

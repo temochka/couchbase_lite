@@ -14,13 +14,12 @@ RSpec.describe CouchbaseLite::Server do
 
     around(:example) do |ex|
       EM.run do
-        Rack::Handler.get('thin').run(server, Port: port) do |s|
-          ex.run
-        end
+        Rack::Handler.get('thin').run(server, Port: port) { ex.run }
       end
     end
 
     it 'replicates database to the replica' do
+      expect(n1ql('SELECT *', db).run.to_a).to_not eq(n1ql('SELECT *', db_replica).run.to_a)
       replicator = CouchbaseLite::Replicator.new(db_replica,
                                                  socket_factory: client_socket_factory,
                                                  url: "ws://localhost:#{port}/db")
