@@ -69,6 +69,13 @@ module CouchbaseLite
       Document.new(deleted_c4_document)
     end
 
+    def save(document, max_rev_tree_depth: 5)
+      raise ArgumentError, 'Must be a Document instance' unless document.is_a?(Document)
+      false_err do |e|
+        FFI.c4doc_save(document.c4_document, max_rev_tree_depth, e)
+      end
+    end
+
     def create_index(name, type, expressions)
       raise ArgumentError unless name && !name.empty?
 
@@ -89,6 +96,42 @@ module CouchbaseLite
                              c4_type,
                              nil,
                              e)
+      end
+    end
+
+    def resolve_conflicts(document, max_depth: 20)
+      return true unless document.conflicted?
+
+      ours = { rev: document.selected_rev.id.to_s, body: document.body }
+      while document.next_leaf_rev
+        theirs = { rev: document.selected_rev.id.to_s, body: document.selected_rev.body.to_s }
+
+        winner = yield ours[:body], theirs[:body]
+
+        winning_rev, losing_rev, body =
+          if winner == ours[:body]
+            [ours[:rev], theirs[:rev], nil]
+          elsif winner == theirs[:body]
+            [theirs[:rev], ours[:rev], nil]
+          else
+            [ours[:rev], theirs[:rev], winner]
+          end
+
+        transaction do
+          false_err do |e|
+            puts body.inspect
+            FFI.c4doc_resolveConflict(document.c4_document,
+                                      FFI::C4String.from_string(winning_rev),
+                                      FFI::C4String.from_string(losing_rev),
+                                      json_to_fleece(body.to_json),
+                                      document.flags,
+                                      e)
+          end
+
+          false_err do |e|
+            FFI.c4doc_save(document.c4_document, max_depth, e)
+          end
+        end
       end
     end
 
