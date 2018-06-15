@@ -58,7 +58,7 @@ RSpec.describe CouchbaseLite::Server do
     end
   end
 
-  context 'conflicts' do
+  context 'replication with conflicts' do
     let(:master_rev) { { answer: 'What is the most comfortable number of tentacles?' } }
     let(:replica_rev) { { answer: 'What is the best number of toppings on ice cream?' } }
     before do
@@ -66,7 +66,7 @@ RSpec.describe CouchbaseLite::Server do
       db_replica.insert('42', replica_rev)
     end
 
-    it 'replicates database to the replica' do
+    it 'registers conflicts' do
       replicator = CouchbaseLite::Replicator.new(db_replica,
                                                  socket_factory: client_socket_factory,
                                                  url: "ws://localhost:#{port}/db")
