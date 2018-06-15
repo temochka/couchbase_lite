@@ -59,9 +59,11 @@ RSpec.describe CouchbaseLite::Server do
   end
 
   context 'conflicts' do
+    let(:master_rev) { { answer: 'What is the most comfortable number of tentacles?' } }
+    let(:replica_rev) { { answer: 'What is the best number of toppings on ice cream?' } }
     before do
-      db.insert('42', answer: 'What is the most comfortable number of tentacles?')
-      db_replica.insert('42', answer: 'What is the best number of toppings on ice cream?')
+      db.insert('42', master_rev)
+      db_replica.insert('42', replica_rev)
     end
 
     it 'replicates database to the replica' do
@@ -75,14 +77,15 @@ RSpec.describe CouchbaseLite::Server do
           and_then {
             doc = db_replica.get('42')
             expect(doc).to be_conflicted
-            db_replica.resolve_conflicts(doc) do |ours, theirs|
-              {
-                answer: 'Both.',
-                ours: ours,
-                theirs: theirs
-              }
-            end
+
+            conflicting_revs = db_replica.get_conflicts(doc)
+            expect(conflicting_revs.size).to eq 2
+            expect(conflicting_revs[0][:body]).to eq(replica_rev)
+            expect(conflicting_revs[1][:body]).to eq(master_rev)
+
+            db_replica.resolve_conflicts(doc, conflicting_revs.map { |r| r[:rev] }, body: { answer: 'Both.' })
             expect(doc).to_not be_conflicted
+
             reloaded_doc = db_replica.get('42')
             expect(reloaded_doc).to_not be_conflicted
             expect(reloaded_doc.body).to eq(answer: 'Both.')

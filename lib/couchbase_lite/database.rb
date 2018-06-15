@@ -99,38 +99,33 @@ module CouchbaseLite
       end
     end
 
-    def resolve_conflicts(document, max_depth: 20)
-      return true unless document.conflicted?
+    def get_conflicts(document)
+      return [] unless document.conflicted?
 
-      ours = { rev: document.selected_rev.id.to_s, body: document.body }
+      leafs = [{ rev: document.rev, body: document.body }]
+
       while document.next_leaf_rev
-        theirs = { rev: document.selected_rev.id.to_s, body: document.selected_rev.body.to_s }
+        leafs << { rev: document.selected_rev.id.to_s, body: document.body }
+      end
 
-        winner = yield ours[:body], theirs[:body]
+      leafs
+    end
 
-        winning_rev, losing_rev, body =
-          if winner == ours[:body]
-            [ours[:rev], theirs[:rev], nil]
-          elsif winner == theirs[:body]
-            [theirs[:rev], ours[:rev], nil]
-          else
-            [ours[:rev], theirs[:rev], winner]
-          end
-
-        transaction do
+    def resolve_conflicts(document, revisions, body: nil, max_depth: 20)
+      transaction do
+        revisions.reduce do |winning_rev, losing_rev|
           false_err do |e|
-            puts body.inspect
             FFI.c4doc_resolveConflict(document.c4_document,
                                       FFI::C4String.from_string(winning_rev),
                                       FFI::C4String.from_string(losing_rev),
-                                      json_to_fleece(body.to_json),
-                                      document.flags,
+                                      json_to_fleece(json(body)),
+                                      0,
                                       e)
           end
+        end
 
-          false_err do |e|
-            FFI.c4doc_save(document.c4_document, max_depth, e)
-          end
+        false_err do |e|
+          FFI.c4doc_save(document.c4_document, max_depth, e)
         end
       end
     end
