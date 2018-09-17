@@ -14,7 +14,6 @@ module CouchbaseLite
              ['libLiteCore.so', 'unix/libLiteCore.so']
            end.freeze
     ffi_lib PATH
-    # ffi_lib ::FFI::Library::LIBC
 
     class RubyObjectRef < ::FFI::Struct
       layout :object_id, :uint64
