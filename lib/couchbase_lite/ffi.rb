@@ -1,4 +1,11 @@
 module CouchbaseLite
+  module LibC
+    extend ::FFI::Library
+    ffi_lib FFI::Library::LIBC
+
+    attach_function :free, [:pointer], :void
+  end
+
   module FFI
     extend ::FFI::Library
     PATH = if RUBY_PLATFORM.include?('darwin')
@@ -57,6 +64,8 @@ module CouchbaseLite
       end
 
       def self.from_string(string)
+        return null if string.nil?
+
         pointer = ::FFI::MemoryPointer.new(string.bytesize + 1)
         pointer.put_string(0, string)
 
@@ -83,7 +92,7 @@ module CouchbaseLite
       include C4StringLike
 
       def self.release(ptr)
-        FFI.c4slice_free(ptr)
+        ::CouchbaseLite::LibC.free(ptr.buf)
       end
 
       def initialize(ptr)
@@ -238,6 +247,14 @@ module CouchbaseLite
              :flags, :uint8, # C4RevisionFlags
              :sequence, :uint64, # C4SequenceNumber
              :body, C4String
+
+      def id
+        self[:revID]
+      end
+
+      def body
+        self[:body]
+      end
     end
 
     # /** Describes a version-controlled document. */
@@ -268,6 +285,10 @@ module CouchbaseLite
         self[:revID]
       end
 
+      def selected_rev
+        self[:selectedRev]
+      end
+
       def sequence
         self[:sequence]
       end
@@ -282,6 +303,10 @@ module CouchbaseLite
 
       def deleted?
         C4DOC_DocDeleted == (flags & C4DOC_DocDeleted)
+      end
+
+      def conflicted?
+        C4DOC_DocConflicted == (flags & C4DOC_DocConflicted)
       end
     end
 
@@ -677,6 +702,25 @@ module CouchbaseLite
                      :uint8, # revisionFlags
                      C4Error.ptr],
                     C4Document.ptr
+    # /** Selects the next leaf revision; like selectNextRevision but skips over non-leaves.
+    #     To distinguish between the end of the iteration and a failure, check the value of
+    #     *outError after the function returns false: if there's no error (code==0) it's normal. */
+    # bool c4doc_selectNextLeafRevision(C4Document* doc C4NONNULL,
+    #                                   bool includeDeleted,
+    #                                   bool withBody,
+    #                                   C4Error *outError) C4API;
+    attach_function :c4doc_selectNextLeafRevision,
+                    [C4Document.ptr,
+                     :bool,
+                     :bool,
+                     C4Error.ptr],
+                    :bool
+    # /** Saves changes to a C4Document.
+    #     Must be called within a transaction.
+    #     The revision history will be pruned to the maximum depth given. */
+    # bool c4doc_save(C4Document *doc C4NONNULL,
+    #                 uint32_t maxRevTreeDepth,
+    #                 C4Error *outError) C4API;
     attach_function :c4doc_save,
                     [C4Document.ptr,
                      :uint32,
@@ -692,6 +736,30 @@ module CouchbaseLite
     attach_function :c4doc_free,
                     [C4Document.ptr],
                     :void
+    # /** Resolves a conflict between two leaf revisions, by deleting one of them and optionally
+    #     adding a new merged revision as a child of the other.
+    #     Must be called within a transaction. Remember to save the document afterwards.
+    #     @param doc  The document.
+    #     @param winningRevID  The conflicting revision to be kept (and optionally updated.)
+    #     @param losingRevID  The conflicting revision to be deleted.
+    #     @param mergedBody  The body of the merged revision, or NULL if none.
+    #     @param mergedFlags  Flags for the merged revision.
+    #     @param error  Error information is stored here.
+    #     @return  True on success, false on failure. */
+    # bool c4doc_resolveConflict(C4Document *doc C4NONNULL,
+    #                            C4String winningRevID,
+    #                            C4String losingRevID,
+    #                            C4Slice mergedBody,
+    #                            C4RevisionFlags mergedFlags,
+    #                            C4Error *error) C4API;
+    attach_function :c4doc_resolveConflict,
+                    [C4Document.ptr,
+                     C4String.by_value,
+                     C4String.by_value,
+                     C4Slice.by_value,
+                     :uint8,
+                     C4Error.ptr],
+                    :bool
 
     # /** Changes the level of the given log domain.
     #     This setting is global to the entire process.
@@ -829,10 +897,6 @@ module CouchbaseLite
     # /** Frees a replicator reference. If the replicator is running it will stop. */
     # void c4repl_free(C4Replicator* repl) C4API;
     attach_function :c4repl_free, [:pointer], :void
-
-    # /** Frees the memory of a heap-allocated slice by calling free(buf). */
-    # void c4slice_free(C4SliceResult) C4API;
-    attach_function :c4slice_free, [C4SliceResult.ptr], :void
 
     # /** One-time registration of socket callbacks. Must be called before using any socket-based
     #     API including the replicator. Do not call multiple times. */

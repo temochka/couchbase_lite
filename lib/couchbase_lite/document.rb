@@ -16,12 +16,31 @@ module CouchbaseLite
       c4_document.rev.to_s
     end
 
+    def flags
+      c4_document.flags
+    end
+
     def sequence
       c4_document.sequence
     end
 
     def deleted?
       c4_document.deleted?
+    end
+
+    def conflicted?
+      c4_document.conflicted?
+    end
+
+    def selected_rev
+      c4_document.selected_rev
+    end
+
+    def next_leaf_rev
+      e = FFI::C4Error.new
+      ret = FFI.c4doc_selectNextLeafRevision(c4_document, false, true, e)
+      raise LibraryError.for(e) if !ret && e.code != 0
+      ret
     end
 
     def body(symbolize_names: true)

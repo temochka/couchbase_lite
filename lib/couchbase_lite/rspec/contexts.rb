@@ -33,7 +33,7 @@ RSpec.shared_context 'CBLite db test' do
 
 end
 
-RSpec.shared_context 'simple dataset' do |size = 20|
+RSpec.shared_context 'simple dataset' do |db_name = 'db', size = 20|
   let(:n) { size }
   let(:records) do
     Array.new(n) do |i|
@@ -42,6 +42,6 @@ RSpec.shared_context 'simple dataset' do |size = 20|
   end
 
   before do
-    records.each_with_index { |r, i| db.insert(i.to_s, r) }
+    records.each_with_index { |r, i| send(db_name).insert(i.to_s, r) }
   end
 end
