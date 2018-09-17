@@ -1,4 +1,11 @@
 module CouchbaseLite
+  module LibC
+    extend ::FFI::Library
+    ffi_lib FFI::Library::LIBC
+
+    attach_function :free, [:pointer], :void
+  end
+
   module FFI
     extend ::FFI::Library
     PATH = if RUBY_PLATFORM.include?('darwin')
@@ -7,6 +14,7 @@ module CouchbaseLite
              ['libLiteCore.so', 'unix/libLiteCore.so']
            end.freeze
     ffi_lib PATH
+    # ffi_lib ::FFI::Library::LIBC
 
     class RubyObjectRef < ::FFI::Struct
       layout :object_id, :uint64
@@ -85,7 +93,7 @@ module CouchbaseLite
       include C4StringLike
 
       def self.release(ptr)
-        FFI.c4slice_free(ptr)
+        ::CouchbaseLite::LibC.free(ptr.buf)
       end
 
       def initialize(ptr)
@@ -890,10 +898,6 @@ module CouchbaseLite
     # /** Frees a replicator reference. If the replicator is running it will stop. */
     # void c4repl_free(C4Replicator* repl) C4API;
     attach_function :c4repl_free, [:pointer], :void
-
-    # /** Frees the memory of a heap-allocated slice by calling free(buf). */
-    # void c4slice_free(C4SliceResult) C4API;
-    attach_function :c4slice_free, [C4SliceResult.ptr], :void
 
     # /** One-time registration of socket callbacks. Must be called before using any socket-based
     #     API including the replicator. Do not call multiple times. */
