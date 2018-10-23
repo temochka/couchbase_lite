@@ -11,7 +11,7 @@ module CouchbaseLite
     PATH = if RUBY_PLATFORM.include?('darwin')
              ['libLiteCore.dylib', 'macos/libLiteCore.dylib']
            else
-             ['libLiteCore.so', 'unix/libLiteCore.so']
+		   ['libLiteCore.a', 'libLiteCore.so', 'unix/libLiteCore.so']
            end.freeze
     ffi_lib PATH
 
@@ -614,22 +614,28 @@ module CouchbaseLite
     enum :C4ReplicatorMode,
          %i(kC4Disabled kC4Passive kC4OneShot kC4Continuous)
 
+    # /** Parameters describing a replication, used when creating a C4Replicator. */
     # typedef struct {
     #     C4ReplicatorMode                  push;              ///< Push mode (from db to remote/other db)
     #     C4ReplicatorMode                  pull;              ///< Pull mode (from db to remote/other db).
     #     C4Slice                           optionsDictFleece; ///< Optional Fleece-encoded dictionary of optional parameters.
+    #     C4ReplicatorPushFilterFunction    pushFilter;        ///< Callback that can reject outgoing revisions
     #     C4ReplicatorValidationFunction    validationFunc;    ///< Callback that can reject incoming revisions
     #     C4ReplicatorStatusChangedCallback onStatusChanged;   ///< Callback to be invoked when replicator's status changes.
-    #     C4ReplicatorDocumentErrorCallback onDocumentError;   ///< Callback notifying of errors with individual documents
+    #     C4ReplicatorDocumentEndedCallback onDocumentEnded;   ///< Callback notifying status of individual documents
+    #     C4ReplicatorBlobProgressCallback  onBlobProgress;    ///< Callback notifying blob progress
     #     void*                             callbackContext;   ///< Value to be passed to the callbacks.
+    #     const C4SocketFactory*            socketFactory;     ///< Custom C4SocketFactory, if not NULL
     # } C4ReplicatorParameters;
     class C4ReplicatorParameters < ::FFI::Struct
       layout :push, :C4ReplicatorMode,
              :pull, :C4ReplicatorMode,
              :optionsDictFleece, C4Slice,
+             :pushFilter, :pointer,
              :validationFunc, :pointer,
              :onStatusChanged, :pointer,
              :onDocumentError, :pointer,
+             :onBlobProgress, :pointer,
              :callbackContext, :pointer,
              :socketFactory, C4SocketFactory.ptr
     end
