@@ -1,14 +1,3 @@
 #!/bin/bash
+docker run -v $(pwd):/checkout -ti temochka/cblite-test:latest bash -c "cd /checkout; bin/setup && bundle exec rspec"
 
-set -eax
-
-BASE=$(dirname $0)
-TAG=couchbase-lite-ruby:
-
-cd $BASE/..
-
-for platform in `ls docker`; do
-  tag="couchbase-lite-ruby:$(basename $platform)"
-  docker build -f docker/$platform/Dockerfile --tag $tag .
-  docker run -ti $tag bundle exec rspec;
-done
