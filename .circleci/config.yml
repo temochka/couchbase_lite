@@ -1,0 +1,10 @@
+version: 2
+jobs:
+  test:
+    working_directory: /checkout
+    docker:
+      - image: temochka/cblite-test:latest
+    steps:
+      - checkout
+      - run: bundle install -j2
+      - run: bundle exec rspec
