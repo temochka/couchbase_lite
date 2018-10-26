@@ -12,7 +12,8 @@ RSpec.describe CouchbaseLite::Server do
 
   around(:example) do |ex|
     EM.run do
-      Rack::Handler.get('thin').run(server, Port: port) { ex.run }
+      Rack::Handler.get('thin').run(server, Port: port)
+      ex.run
     end
   end
 
