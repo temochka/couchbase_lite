@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  test:
+  build:
     working_directory: /checkout
     docker:
       - image: temochka/cblite-test:latest
