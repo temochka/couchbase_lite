@@ -1,28 +1,56 @@
-# CouchbaseLite
+# Couchbase Lite for Ruby
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/couchbase_lite`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+This is an experimental wrapper of the [Couchbase Lite Core](https://github.com/couchbase/couchbase-lite-core) C library for Ruby. 
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'couchbase_lite'
+gem 'couchbase_lite', github: 'temochka/couchbase_lite'
 ```
 
 And then execute:
 
     $ bundle
 
-Or install it yourself as:
-
-    $ gem install couchbase_lite
+The `couchbase_lite` gem is not published on Rubygems.
 
 ## Usage
 
-TODO: Write usage instructions here
+*Note: You must have a compiled version of the [Couchbase Lite Core library](https://github.com/couchbase/couchbase-lite-core) for your platform on your LD_LIBRARY_PATH.*
+
+Create/open a database:
+
+``` ruby
+db = CouchbaseLite::Database.open('database')
+```
+
+CRUD documents:
+
+``` ruby
+id = SecureRandom.uuid
+inserted_doc = db.insert(id, key: 'value')
+read_doc = db.get(id)
+updated_doc = db.update(id, key: 'new_value')
+
+db.delete(id)
+```
+
+AST queries:
+
+``` ruby
+db.query(%w(foo), what: [%w(. foo)])
+```
+
+N1QL queries (requires the [n1ql](https://github.com/temochka/n1ql) gem):
+
+``` ruby
+query = N1ql::Query.new('SELECT foo._id AS id, foo.* AS doc FROM foo')
+db.query(query.titles, query.ast)
+```
+
+For more features (live queries, replication, etc.), see the specs.
 
 ## Development
 
@@ -32,7 +60,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/couchbase_lite.
+Bug reports and pull requests are welcome on GitHub at https://github.com/temochka/couchbase_lite.
 
 ## License
 
