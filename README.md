@@ -1,5 +1,7 @@
 # Couchbase Lite for Ruby
 
+[![CircleCI](https://circleci.com/gh/temochka/couchbase_lite/tree/master.svg?style=svg)](https://circleci.com/gh/temochka/couchbase_lite/tree/master)
+
 This is an experimental wrapper of the [Couchbase Lite Core](https://github.com/couchbase/couchbase-lite-core) C library for Ruby. 
 
 ## Installation
