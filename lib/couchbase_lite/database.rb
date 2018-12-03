@@ -134,6 +134,10 @@ module CouchbaseLite
       Query.new(self, titles, ast)
     end
 
+    def blob_storage
+      BlobStorage.new(self)
+    end
+
     private
 
     def initialize(c4_database, async: ->(&block) { block.call })

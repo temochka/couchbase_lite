@@ -30,7 +30,6 @@ RSpec.shared_context 'CBLite db test' do
       _query(q.titles, q.ast, database)
     end
   end
-
 end
 
 RSpec.shared_context 'simple dataset' do |db_name = 'db', size = 20|

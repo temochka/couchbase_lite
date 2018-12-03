@@ -114,6 +114,12 @@ RSpec.describe CouchbaseLite::Database do
     specify { expect(query.ast).to eq({ what: [%w(. foo)] }.to_json) }
   end
 
+  describe '#blob_storage' do
+    subject(:blob_storage) { db.blob_storage }
+
+    it { is_expected.to be_a(CouchbaseLite::BlobStorage) }
+  end
+
   describe '#add_observer' do
     let(:notifications) { [] }
     let(:observer) { ->(event) { notifications << event } }

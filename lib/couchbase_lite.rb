@@ -90,6 +90,7 @@ module CouchbaseLite
   end
 end
 
+require 'couchbase_lite/blob_storage'
 require 'couchbase_lite/database'
 require 'couchbase_lite/document'
 require 'couchbase_lite/ffi'

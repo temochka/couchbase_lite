@@ -95,4 +95,32 @@ RSpec.describe CouchbaseLite::Server do
           always { EM.stop }
     end
   end
+
+  context 'blob replication' do
+    let(:blob_storage) { db.blob_storage }
+    let(:replica_blob_storage) { db_replica.blob_storage }
+    let(:contents) { 'blob contents' }
+    let(:blob_ref) { blob_storage.store(contents) }
+
+    before do
+      db.insert('42', blob: blob_ref)
+    end
+
+    it 'replicates blobs from master to replica' do
+      expect { replica_blob_storage.read(blob_ref) }.to raise_error(CouchbaseLite::DocumentNotFound)
+
+      replicator = CouchbaseLite::Replicator.new(db_replica,
+                                                 socket_factory: client_socket_factory,
+                                                 url: "ws://localhost:#{port}/db")
+
+      expect { replicator.start }.
+        to run_until { replicator.status.level == :idle }.
+          with_timeout(5).
+          and_then {
+            expect(replica_blob_storage.read(blob_ref)).to eq(contents)
+            replicator.stop
+          }.
+          always { EM.stop }
+    end
+  end
 end

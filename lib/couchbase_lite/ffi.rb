@@ -204,6 +204,22 @@ module CouchbaseLite
 
     class C4BlobKey < ::FFI::Struct
       layout :bytes, [:uint8, 20]
+
+      extend ErrorHandling
+
+      def self.from_string(key)
+        c4_blob_key = FFI::C4BlobKey.new
+
+        false_err do |_|
+          FFI.c4blob_keyFromString(FFI::C4String.from_string(key), c4_blob_key)
+        end
+
+        c4_blob_key
+      end
+
+      def to_s
+        FFI.c4blob_keyToString(self).to_s
+      end
     end
 
     # /** Flags describing a document. */
@@ -689,6 +705,39 @@ module CouchbaseLite
                      :bool, # commit
                      C4Error.ptr], # error
                      :bool
+
+    # /** Returns the BlobStore associated with a bundled database.
+    #     Fails if the database is not bundled.
+    #     DO NOT call c4blob_freeStore on this! The C4Database will free it when it closes. */
+    # C4BlobStore* c4db_getBlobStore(C4Database *db C4NONNULL, C4Error* outError) C4API;
+    attach_function :c4db_getBlobStore, [:pointer, C4Error.ptr], :pointer
+
+    # /** Reads the entire contents of a blob into memory. Caller is responsible for freeing it. */
+    # C4SliceResult c4blob_getContents(C4BlobStore* C4NONNULL, C4BlobKey, C4Error*) C4API;
+    attach_function :c4blob_getContents, [:pointer, C4BlobKey.by_value, C4Error.ptr], C4SliceResult.by_value
+
+    # /** Decodes a string of the form "sha1-"+base64 into a raw key. */
+    # bool c4blob_keyFromString(C4String str, C4BlobKey* C4NONNULL) C4API;
+    attach_function :c4blob_keyFromString, [C4String.by_value, C4BlobKey.ptr], :bool
+
+    # /** Encodes a blob key to a string of the form "sha1-"+base64. */
+    # C4StringResult c4blob_keyToString(C4BlobKey) C4API;
+    attach_function :c4blob_keyToString, [C4BlobKey.by_value], C4StringResult.by_value
+
+    # /** Stores a blob. The associated key will be written to `outKey`.
+    #     If `expectedKey` is not NULL, then the operation will fail unless the contents actually
+    #     have that key. */
+    # bool c4blob_create(C4BlobStore *store C4NONNULL,
+    #                    C4Slice contents,
+    #                    const C4BlobKey *expectedKey,
+    #                    C4BlobKey *outKey,
+    #                    C4Error *error) C4API;
+    attach_function :c4blob_create, [:pointer, C4Slice.by_value, C4BlobKey.ptr, C4BlobKey.ptr, C4Error.ptr],
+                    :bool
+
+    # /** Deletes a blob from the store given its key. */
+    # bool c4blob_delete(C4BlobStore* C4NONNULL, C4BlobKey, C4Error*) C4API;
+    attach_function :c4blob_delete, [:pointer, C4BlobKey.by_value, C4Error.ptr], :bool
 
     attach_function :c4db_encodeJSON, [:pointer, C4Slice.by_value, C4Error.ptr], C4Slice.by_value
 
