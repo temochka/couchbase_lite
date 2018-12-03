@@ -76,6 +76,10 @@ module CouchbaseLite
       end
     end
 
+    def make_default
+      FFI.c4socket_registerFactory(@c4_socket_factory)
+    end
+
     private
 
     def make_factory
@@ -90,4 +94,7 @@ module CouchbaseLite
       factory
     end
   end
+
+  DEFAULT_SOCKET_FACTORY = ReplicatorSocketFactory.new
+  DEFAULT_SOCKET_FACTORY.make_default
 end
