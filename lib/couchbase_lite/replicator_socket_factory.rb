@@ -4,7 +4,7 @@ module CouchbaseLite
   class ReplicatorSocketFactory
     OPEN_REQUEST = lambda do |c4_socket, c4_address, _c4_slice, context|
       begin
-        return if !c4_socket[:nativeHandle].null?
+        break unless c4_socket[:nativeHandle].null?
         uri = c4_address.to_s
         CouchbaseLite.logger.info("replicator:connect - #{uri}")
         faye_socket = Faye::WebSocket::Client.new(uri)

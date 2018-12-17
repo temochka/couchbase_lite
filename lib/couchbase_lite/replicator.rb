@@ -25,6 +25,25 @@ module CouchbaseLite
           :busy
         end
       end
+
+      def progress
+        progress = @c4_status[:progress]
+        OpenStruct.new(units_completed: progress[:unitsCompleted],
+                       units_total: progress[:unitsTotal],
+                       document_count: progress[:documentCount])
+      end
+
+      def error
+        @c4_status[:error] && LibraryError.for(@c4_status[:error])
+      end
+
+      def to_h
+        {
+          level: level,
+          progress: progress.to_h,
+          error: error.to_s
+        }
+      end
     end
 
     attr_accessor :socket
