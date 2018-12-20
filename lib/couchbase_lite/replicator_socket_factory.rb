@@ -23,6 +23,7 @@ module CouchbaseLite
         CouchbaseLite.logger.debug("replicator:write - #{c4_slice[:size]} bytes")
         replication_socket = c4_socket[:nativeHandle].deref
         replication_socket.faye_socket.send(c4_slice.to_bytes)
+        FFI.c4socket_completedWrite(c4_socket, c4_slice[:size])
       rescue => e
         CouchbaseLite.logger.error("replicator:write - #{e.class}: #{e.message}")
         CouchbaseLite.logger.debug(e)
