@@ -827,6 +827,7 @@ module CouchbaseLite
                     [:pointer, :C4LogLevel],
                     :void
 
+    enum :FLTrust, [:kFLUntrusted, :kFLTrusted]
     attach_function :flarrayiter_get_value,
                     :FLArrayIterator_GetValue,
                     [:pointer],
@@ -838,6 +839,14 @@ module CouchbaseLite
     attach_function :flvalue_to_json,
                     :FLValue_ToJSON,
                     [:pointer],
+                    C4SliceResult.by_value
+    attach_function :flvalue_from_data,
+                    :FLValue_FromData,
+                    [C4Slice.by_value, :FLTrust],
+                    :pointer
+    attach_function :fldata_convert_json,
+                    :FLData_ConvertJSON,
+                    [C4Slice.by_value, C4Error.ptr],
                     C4SliceResult.by_value
 
     attach_function :c4query_new,
