@@ -2,12 +2,14 @@ require 'couchbase_lite/replicator_socket'
 
 module CouchbaseLite
   class ReplicatorSocketFactory
+    HEARTBEAT_INTERVAL = 5
+
     OPEN_REQUEST = lambda do |c4_socket, c4_address, _c4_slice, context|
       begin
         break unless c4_socket[:nativeHandle].null?
         uri = c4_address.to_s
         CouchbaseLite.logger.info("replicator:connect - #{uri}")
-        faye_socket = Faye::WebSocket::Client.new(uri)
+        faye_socket = Faye::WebSocket::Client.new(uri, nil, ping: HEARTBEAT_INTERVAL)
         factory = context.deref
         factory.sockets << ReplicatorSocket.new(faye_socket, c4_socket)
       rescue => e
@@ -61,7 +63,7 @@ module CouchbaseLite
 
     def build_from_rack(env)
       if Faye::WebSocket.websocket?(env)
-        faye_socket = Faye::WebSocket.new(env)
+        faye_socket = Faye::WebSocket.new(env, nil, ping: HEARTBEAT_INTERVAL)
 
         url = URI::Generic.build(scheme: 'ws',
                                  host: env['REMOTE_ADDR'],
