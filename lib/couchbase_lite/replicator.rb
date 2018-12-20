@@ -4,6 +4,10 @@ module CouchbaseLite
   class Replicator
     include ErrorHandling
 
+    DOCUMENT_ERROR_CALLBACK = lambda do |_replicator, pushing, docID, _error, _transient, _context|
+      CouchbaseLite.logger.error("replicator:document_error - #{docID.to_s}, pushing: #{pushing.inspect}")
+    end
+
     class Status
       attr_reader :c4_status
 
@@ -105,6 +109,7 @@ module CouchbaseLite
       p = FFI::C4ReplicatorParameters.new
       p[:push] = server ? :kC4Passive : :kC4Continuous
       p[:pull] = server ? :kC4Passive : :kC4Continuous
+      p[:onDocumentError] = DOCUMENT_ERROR_CALLBACK
       p[:socketFactory] = @socket_factory&.c4_socket_factory
       p
     end
