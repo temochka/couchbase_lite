@@ -4,6 +4,10 @@ module CouchbaseLite
   class Replicator
     include ErrorHandling
 
+    DOCUMENT_ERROR_CALLBACK = lambda do |_replicator, pushing, docID, _error, _transient, _context|
+      CouchbaseLite.logger.error("replicator:document_error - #{docID.to_s}, pushing: #{pushing.inspect}")
+    end
+
     class Status
       attr_reader :c4_status
 
@@ -24,6 +28,25 @@ module CouchbaseLite
         when :kC4Busy
           :busy
         end
+      end
+
+      def progress
+        progress = @c4_status[:progress]
+        OpenStruct.new(units_completed: progress[:unitsCompleted],
+                       units_total: progress[:unitsTotal],
+                       document_count: progress[:documentCount])
+      end
+
+      def error
+        @c4_status[:error] && LibraryError.for(@c4_status[:error])
+      end
+
+      def to_h
+        {
+          level: level,
+          progress: progress.to_h,
+          error: error.to_s
+        }
       end
     end
 
@@ -86,6 +109,7 @@ module CouchbaseLite
       p = FFI::C4ReplicatorParameters.new
       p[:push] = server ? :kC4Passive : :kC4Continuous
       p[:pull] = server ? :kC4Passive : :kC4Continuous
+      p[:onDocumentError] = DOCUMENT_ERROR_CALLBACK
       p[:socketFactory] = @socket_factory&.c4_socket_factory
       p
     end

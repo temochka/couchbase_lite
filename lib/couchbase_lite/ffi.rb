@@ -630,6 +630,15 @@ module CouchbaseLite
     enum :C4ReplicatorMode,
          %i(kC4Disabled kC4Passive kC4OneShot kC4Continuous)
 
+    # /** Callback a client can register, to hear about errors replicating individual documents. */
+    #    typedef void (*C4ReplicatorDocumentErrorCallback)(C4Replicator* C4NONNULL,
+    #                                                      bool pushing,
+    #                                                      C4String docID,
+    #                                                      C4Error error,
+    #                                                      bool transient,
+    #                                                      void *context);
+    callback :on_document_error, [:pointer, :bool, C4String.by_value, C4Error.by_value, :bool, :pointer], :void
+
     # /** Parameters describing a replication, used when creating a C4Replicator. */
     # typedef struct {
     #     C4ReplicatorMode                  push;              ///< Push mode (from db to remote/other db)
@@ -650,7 +659,7 @@ module CouchbaseLite
              :pushFilter, :pointer,
              :validationFunc, :pointer,
              :onStatusChanged, :pointer,
-             :onDocumentError, :pointer,
+             :onDocumentError, :on_document_error,
              :onBlobProgress, :pointer,
              :callbackContext, :pointer,
              :socketFactory, C4SocketFactory.ptr
@@ -827,6 +836,7 @@ module CouchbaseLite
                     [:pointer, :C4LogLevel],
                     :void
 
+    enum :FLTrust, [:kFLUntrusted, :kFLTrusted]
     attach_function :flarrayiter_get_value,
                     :FLArrayIterator_GetValue,
                     [:pointer],
@@ -838,6 +848,14 @@ module CouchbaseLite
     attach_function :flvalue_to_json,
                     :FLValue_ToJSON,
                     [:pointer],
+                    C4SliceResult.by_value
+    attach_function :flvalue_from_data,
+                    :FLValue_FromData,
+                    [C4Slice.by_value, :FLTrust],
+                    :pointer
+    attach_function :fldata_convert_json,
+                    :FLData_ConvertJSON,
+                    [C4Slice.by_value, C4Error.ptr],
                     C4SliceResult.by_value
 
     attach_function :c4query_new,
