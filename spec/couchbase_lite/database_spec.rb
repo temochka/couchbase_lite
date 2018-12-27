@@ -33,6 +33,60 @@ RSpec.describe CouchbaseLite::Database do
     it_behaves_like 'document'
   end
 
+  describe '#put' do
+    context 'when inserting a new revision' do
+      subject(:document) { db.put(id, body) }
+
+      it_behaves_like 'document'
+    end
+
+    context 'when inserting an existing revision' do
+      let(:rev) { '1-0b265579fcb1b06526a7649efae41c8812f4200d' }
+
+      subject(:document) do
+        db.put(id,
+               body,
+               revision_flags: { leaf: true },
+               existing_revision: true,
+               history: [rev])
+      end
+
+      it_behaves_like 'document'
+
+      specify { expect(document.rev).to eq rev }
+    end
+
+    context 'when inserting a deleted revision' do
+      let(:original) { db.put(id, body) }
+
+      subject(:document) do
+        db.put(id, nil, revision_flags: { deleted: true }, history: [original.rev])
+      end
+
+      it { is_expected.to be_deleted }
+    end
+
+    context 'when inserting a conflicted revision' do
+      let(:original) { db.put(id, body) }
+      let(:conflicting_body) { { bar: 'buz' } }
+
+      before do
+        db.update(original, conflicting_body)
+      end
+
+      subject(:document) do
+        db.put(id,
+               nil,
+               revision_flags: { leaf: true },
+               existing_revision: true,
+               allow_conflict: true,
+               history: ['2-0b265579fcb1b06526a7649efae41c8812f4200d', original.rev])
+      end
+
+      it { is_expected.to be_conflicted }
+    end
+  end
+
   describe '#get' do
     subject(:document) { db.get(id) }
 

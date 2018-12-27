@@ -63,26 +63,38 @@ module CouchbaseLite
         NULL
       end
 
-      def self.from_string(string)
+      def self.from_string(string, pointer = nil)
         return null if string.nil?
 
-        pointer = ::FFI::MemoryPointer.new(string.bytesize + 1)
-        pointer.put_string(0, string)
+        bytes_pointer = ::FFI::MemoryPointer.new(string.bytesize + 1)
+        bytes_pointer.put_string(0, string)
 
-        s = new
-        s[:buf] = pointer
+        s = new(pointer)
+        s[:buf] = bytes_pointer
         s[:size] = string.bytesize
         s
       end
 
-      def self.from_bytes(bytes)
-        pointer = ::FFI::MemoryPointer.new(bytes.count)
-        pointer.put_array_of_int8(0, bytes)
+      def self.from_bytes(bytes, pointer = nil)
+        bytes_pointer = ::FFI::MemoryPointer.new(bytes.count)
+        bytes_pointer.put_array_of_int8(0, bytes)
 
-        s = new
-        s[:buf] = pointer
+        s = new(pointer)
+        s[:buf] = bytes_pointer
         s[:size] = bytes.count
         s
+      end
+
+      def self.array(strings)
+        return if strings.empty?
+
+        array_memory = ::FFI::MemoryPointer.new(FFI::C4String, strings.size)
+
+        strings.each_with_index do |str, i|
+          from_string(str, array_memory + i * FFI::C4String.size)
+        end
+
+        array_memory
       end
     end
 
@@ -247,8 +259,26 @@ module CouchbaseLite
     C4DOC_RevLeaf = 0x02
     C4DOC_RevNew = 0x04
     C4DOC_RevHasAttachments = 0x08
-    C4DOC_kRevKeepBody = 0x10
-    C4DOC_kRevIsConflict = 0x20
+    C4DOC_RevKeepBody = 0x10
+    C4DOC_RevIsConflict = 0x20
+
+    module C4RevisionFlags
+      def self.make(deleted: false,
+                    leaf: false,
+                    new: false,
+                    has_attachments: false,
+                    keep_body: false,
+                    is_conflict: false)
+        flags = 0
+        flags |= C4DOC_RevDeleted if deleted
+        flags |= C4DOC_RevLeaf if leaf
+        flags |= C4DOC_RevNew if new
+        flags |= C4DOC_RevHasAttachments if has_attachments
+        flags |= C4DOC_RevKeepBody if keep_body
+        flags |= C4DOC_RevIsConflict if is_conflict
+        flags
+      end
+    end
 
 
     # /** Describes a revision of a document. A sub-struct of C4Document. */

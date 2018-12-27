@@ -41,6 +41,36 @@ module CouchbaseLite
       Document.new(c4_document)
     end
 
+    def put(id,
+            json_body,
+            revision_flags: {},
+            existing_revision: false,
+            allow_conflict: false,
+            history: [],
+            save: true,
+            max_rev_tree_depth: 0,
+            remote_db_id: 0)
+      request = FFI::C4DocPutRequest.new
+      c4_document = transaction do
+        null_err do |e|
+          request[:docID] = FFI::C4String.from_string(id)
+          request[:body] = json_body ? json_to_fleece(json(json_body)) : FFI::C4Slice.null
+          request[:revFlags] = FFI::C4RevisionFlags.make(revision_flags)
+          request[:existingRevision] = existing_revision
+          request[:allowConflict] = allow_conflict
+          request[:history] = FFI::C4String.array(history)
+          request[:historyCount] = history.count
+          request[:save] = save
+          request[:maxRevTreeDepth] = max_rev_tree_depth
+          request[:remoteDBID] = remote_db_id
+
+          FFI.c4doc_put(c4_database, request, nil, e)
+        end
+      end
+
+      Document.new(c4_document)
+    end
+
     def get(id)
       Document.new(get_document(id))
     rescue DocumentNotFound
