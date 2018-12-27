@@ -100,8 +100,8 @@ RSpec.describe CouchbaseLite::Server do
   context 'blob replication' do
     let(:blob_storage) { db.blob_storage }
     let(:replica_blob_storage) { db_replica.blob_storage }
-    let(:megabyte) { 1024 * 1024 }
-    let(:contents) { Random.new.bytes(5 * megabyte) }
+    let(:blob_size) { 1024 * 512 }
+    let(:contents) { Random.new.bytes(5 * blob_size) }
     let(:blob_ref) { blob_storage.store(contents) }
 
     before do
