@@ -169,7 +169,56 @@ RSpec.describe CouchbaseLite::Database do
     context 'when there is one conflict' do
       include_context 'revision conflicts'
 
+      subject(:conflict) { conflicts.first }
+
       specify { expect(conflicts.count).to eq 1 }
+
+      it { is_expected.to match([{ body: { foo: 'bar' }, rev: String }, { body: { foo: 'buz' }, rev: String }]) }
+    end
+  end
+
+  describe '#get_conflicts' do
+    subject(:conflicts) { db.get_conflicts(document) }
+
+    context 'when the document is not conflicted' do
+      let(:document) { db.insert(id, body) }
+
+      it { is_expected.to be_empty }
+    end
+
+    context 'when the document is conflicted' do
+      include_context 'revision conflicts'
+
+      let(:document) { conflicted_document }
+
+      it { is_expected.to match([{ body: { foo: 'bar' }, rev: String }, { body: { foo: 'buz' }, rev: String }]) }
+    end
+  end
+
+  describe '#resolve_conflicts' do
+    context 'when the document is not conflicted' do
+      let(:original) { db.insert(id, body) }
+      let(:update) { db.update(original, body) }
+
+      it 'raises an error' do
+        expect(original.rev).to_not eq(update.rev)
+        expect { db.resolve_conflicts(update, [original.rev, update.rev]) }.to raise_error(CouchbaseLite::LibraryError)
+      end
+    end
+
+    context 'when the document is conflicted' do
+      include_context 'revision conflicts'
+
+      let(:conflicting_revs) { db.get_conflicts(conflicted_document) }
+
+      it 'resolves conflicts' do
+        expect { db.resolve_conflicts(conflicted_document, conflicting_revs.map { |r| r[:rev] }, body: { x: 'y' }) }.
+          to change { conflicted_document.conflicted? }.from(true).to(false)
+
+        reloaded_doc = db.get(conflicted_document.id)
+        expect(reloaded_doc).to_not be_conflicted
+        expect(reloaded_doc.body).to eq(x: 'y')
+      end
     end
   end
 

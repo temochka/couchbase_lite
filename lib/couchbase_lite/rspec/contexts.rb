@@ -57,4 +57,6 @@ RSpec.shared_context 'revision conflicts' do |db_name = 'db'|
            history: ['1-0b265579fcb1b06526a7649efae41c8812f4200d'],
            remote_db_id: 1)
   end
+
+  let(:conflicted_document) { db.get('1') }
 end

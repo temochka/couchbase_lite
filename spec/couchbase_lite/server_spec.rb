@@ -85,12 +85,6 @@ RSpec.describe CouchbaseLite::Server do
             expect(conflicting_revs[0][:body]).to eq(replica_rev)
             expect(conflicting_revs[1][:body]).to eq(master_rev)
 
-            db_replica.resolve_conflicts(doc, conflicting_revs.map { |r| r[:rev] }, body: { answer: 'Both.' })
-            expect(doc).to_not be_conflicted
-
-            reloaded_doc = db_replica.get('42')
-            expect(reloaded_doc).to_not be_conflicted
-            expect(reloaded_doc.body).to eq(answer: 'Both.')
             replicator.stop
           }.
           always { EM.stop }
