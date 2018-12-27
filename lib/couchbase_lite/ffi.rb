@@ -382,6 +382,45 @@ module CouchbaseLite
              :remoteDBID, :uint32
     end
 
+    # typedef C4_OPTIONS(uint16_t, C4EnumeratorFlags) {
+    #     kC4Descending           = 0x01, ///< If true, iteration goes by descending document IDs.
+    #     kC4IncludeDeleted       = 0x08, ///< If true, include deleted documents.
+    #     kC4IncludeNonConflicted = 0x10, ///< If false, include _only_ documents in conflict.
+    #     kC4IncludeBodies        = 0x20  /**< If false, document bodies will not be preloaded, just
+    #                                metadata (docID, revID, sequence, flags.) This is faster if you
+    #                                don't need to access the revision tree or revision bodies. You
+    #                                can still access all the data of the document, but it will
+    #                                trigger loading the document body from the database. */
+    # };
+    C4ENUMERATOR_kC4Descending = 0x01
+    C4ENUMERATOR_kC4IncludeDeleted = 0x08
+    C4ENUMERATOR_kC4IncludeNonConflicted = 0x10
+    C4ENUMERATOR_kC4IncludeBodies = 0x20
+
+    # /** Options for enumerating over all documents. */
+    # typedef struct {
+    #     C4EnumeratorFlags flags;    ///< Option flags */
+    # } C4EnumeratorOptions;
+    class C4EnumeratorOptions < ::FFI::Struct
+      layout :flags, :uint16
+
+      def self.make(descending: false, deleted: false, only_conflicts: false, bodies: false)
+        new.tap do |options|
+          options[:flags] = 0
+          options[:flags] |= C4ENUMERATOR_kC4Descending if descending
+          options[:flags] |= C4ENUMERATOR_kC4IncludeDeleted if deleted
+          options[:flags] |= C4ENUMERATOR_kC4IncludeNonConflicted unless only_conflicts
+          options[:flags] |= C4ENUMERATOR_kC4IncludeBodies if bodies
+        end
+      end
+    end
+
+    class C4DocEnumerator
+      def self.auto(ptr)
+        ::FFI::AutoPointer.new(ptr, FFI.method(:c4enum_free))
+      end
+    end
+
     class C4Query
       def self.auto(ptr)
         ::FFI::AutoPointer.new(ptr, FFI.method(:c4query_free))
@@ -745,6 +784,24 @@ module CouchbaseLite
                      C4Error.ptr], # error
                      :bool
 
+    #    /** Creates an enumerator ordered by sequence.
+    #        Caller is responsible for freeing the enumerator when finished with it.
+    #        @param database  The database.
+    #        @param since  The sequence number to start _after_. Pass 0 to start from the beginning.
+    #        @param options  Enumeration options (NULL for defaults).
+    #        @param outError  Error will be stored here on failure.
+    #        @return  A new enumerator, or NULL on failure. */
+    #    C4DocEnumerator* c4db_enumerateChanges(C4Database *database C4NONNULL,
+    #                                           C4SequenceNumber since,
+    #                                           const C4EnumeratorOptions *options,
+    #                                           C4Error *outError) C4API;
+    attach_function :c4db_enumerateChanges,
+                    [:pointer,
+                     :uint64,
+                     C4EnumeratorOptions.ptr,
+                     C4Error.ptr],
+                    :pointer
+
     # /** Returns the BlobStore associated with a bundled database.
     #     Fails if the database is not bundled.
     #     DO NOT call c4blob_freeStore on this! The C4Database will free it when it closes. */
@@ -931,6 +988,25 @@ module CouchbaseLite
                      C4IndexOptions.ptr, # index options
                      C4Error.ptr], # error
                     :bool
+
+    # /** Frees a C4DocEnumerator handle. */
+    # void c4enum_free(C4DocEnumerator *e) C4API;
+    attach_function :c4enum_free, [:pointer], :void
+
+    # /** Advances the enumerator to the next document.
+    #     Returns false at the end, or on error; look at the C4Error to determine which occurred,
+    #     and don't forget to free the enumerator. */
+    # bool c4enum_next(C4DocEnumerator *e C4NONNULL, C4Error *outError) C4API;
+    attach_function :c4enum_next, [:pointer, C4Error.ptr], :bool
+
+    # /** Returns the current document, if any, from an enumerator.
+    #     @param e  The enumerator.
+    #     @param outError  Error will be stored here on failure.
+    #     @return  The document, or NULL if there is none or if an error occurred reading its body.
+    #              Caller is responsible for calling c4document_free when done with it. */
+    # struct C4Document* c4enum_getDocument(C4DocEnumerator *e C4NONNULL,
+    #                                       C4Error *outError) C4API;
+    attach_function :c4enum_getDocument, [:pointer, C4Error.ptr], C4Document.ptr
 
     # /** Creates a new replicator.
     #     @param db  The local database.

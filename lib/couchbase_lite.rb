@@ -93,6 +93,7 @@ end
 require 'couchbase_lite/blob_storage'
 require 'couchbase_lite/database'
 require 'couchbase_lite/document'
+require 'couchbase_lite/document_enumerator'
 require 'couchbase_lite/ffi'
 require 'couchbase_lite/fleece'
 require 'couchbase_lite/live_result'

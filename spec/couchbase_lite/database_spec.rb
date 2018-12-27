@@ -159,6 +159,20 @@ RSpec.describe CouchbaseLite::Database do
     end
   end
 
+  describe '#conflicts' do
+    subject(:conflicts) { db.conflicts.to_a }
+
+    context 'when there are no conflicts' do
+      it { is_expected.to be_empty }
+    end
+
+    context 'when there is one conflict' do
+      include_context 'revision conflicts'
+
+      specify { expect(conflicts.count).to eq 1 }
+    end
+  end
+
   describe '#query' do
     subject(:query) { db.query(%w(foo), what: [%w(. foo)]) }
 
