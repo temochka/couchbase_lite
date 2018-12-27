@@ -129,16 +129,12 @@ module CouchbaseLite
       end
     end
 
-    def conflicts(since = 0)
-      c4_doc_enumerator = null_err do |e|
-        FFI.c4db_enumerateChanges(c4_database,
-                                  since,
-                                  FFI::C4EnumeratorOptions.make(only_conflicts: true, bodies: true),
-                                  e)
-      end
+    def documents(**options)
+      DocumentEnumerator.new(self, options)
+    end
 
-      enumerator = DocumentEnumerator.new(FFI::C4DocEnumerator.auto(c4_doc_enumerator))
-      enumerator.lazy.map { |doc| get_conflicts(doc) }
+    def conflicts(**options)
+      documents(**options, only_conflicts: true, bodies: true).lazy.map { |doc| get_conflicts(doc) }
     end
 
     def get_conflicts(document)

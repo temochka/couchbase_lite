@@ -159,6 +159,20 @@ RSpec.describe CouchbaseLite::Database do
     end
   end
 
+  describe '#documents' do
+    include_context 'simple dataset', 'db', 42
+
+    subject(:documents) { db.documents }
+
+    before do
+      db.update('0', body)
+    end
+
+    it { is_expected.to be_a(CouchbaseLite::DocumentEnumerator) }
+    specify { expect(documents.count).to eq 42 }
+    specify { expect(documents.map(&:id)).to eq [*1...42, 0].map(&:to_s) }
+  end
+
   describe '#conflicts' do
     subject(:conflicts) { db.conflicts.to_a }
 
