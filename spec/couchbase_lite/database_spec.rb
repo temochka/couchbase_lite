@@ -252,18 +252,27 @@ RSpec.describe CouchbaseLite::Database do
   end
 
   describe '#add_observer' do
+    let(:changes) { [] }
+    let(:seqs) { [] }
     let(:notifications) { [] }
-    let(:observer) { ->(event) { notifications << event } }
+    let(:observer) do
+      ->(event, seq, num_changes) do
+        notifications << event
+        changes << num_changes
+        seqs << seq
+      end
+    end
 
     before do
       db.add_observer(observer, :call)
-      doc = db.insert(id, body)
-      db.delete(doc)
+      db.insert(id, body)
+      db.insert("#{id}_alt", body)
     end
 
     context 'standard async method' do
-      it 'synchronously notifies observers on every commit' do
-        expect(notifications.count).to eq 2
+      it 'asynchronously notifies observers within a reasonable amount of time' do
+        sleep 0.1
+        expect(changes.reduce(:+)).to eq 2
         expect(notifications.uniq).to eq %i(commit)
       end
     end
@@ -271,14 +280,18 @@ RSpec.describe CouchbaseLite::Database do
     context 'custom async method' do
       let(:queue) { Queue.new }
       let(:async_method) { ->(&block) { queue << block } }
-      let(:async_loop) { -> { queue.pop.call } }
       let(:cblite_db_options) { { async: async_method } }
+      let(:worker_loop) { Thread.new { loop { queue.pop.call } } }
+
+      after do
+        worker_loop.exit
+      end
 
       it 'uses provided async method to delay notifications until later' do
-        expect(queue.size).to eq 2
-        2.times do
-          expect { async_loop.call }.to change { notifications.size }.by(1)
-        end
+        expect(queue.size).to eq 1
+        expect { worker_loop; sleep 0.1 }.
+          to change { notifications.size }.by(1).
+          and change { changes.reduce(0, :+) }.by(2)
         expect(notifications.uniq).to eq %i(commit)
       end
     end

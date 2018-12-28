@@ -10,10 +10,12 @@ RSpec.describe CouchbaseLite::LiveResult do
     subject(:live) { query.run.live }
 
     it 'auto-refreshes once the change occurs' do
-      expect(live.result).to be_a(CouchbaseLite::QueryResult)
-      expect(live.result.first).to eq('number' => 0)
+      original = live.result
+      expect(original).to be_a(CouchbaseLite::QueryResult)
+      expect(original.first).to eq('number' => 0)
       db.update('0', number: -1)
-      expect(live.result)
+      sleep 0.1
+      expect(live.result).to_not eq(original)
       expect(live.result.first).to eq('number' => -1)
     end
   end
@@ -26,7 +28,9 @@ RSpec.describe CouchbaseLite::LiveResult do
 
     it 'runs callback on every commit' do
       db.delete('0')
+      sleep 0.1
       db.delete('1')
+      sleep 0.1
       expect(snapshots).to eq [[0, 1, 2], [1, 2, 3], [2, 3, 4]]
     end
   end

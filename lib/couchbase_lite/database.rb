@@ -178,9 +178,16 @@ module CouchbaseLite
 
     private
 
-    def initialize(c4_database, async: ->(&block) { block.call })
+    def initialize(c4_database, async: ->(&block) { Thread.new { block.call } })
       @c4_database = c4_database
       @async = async
+      @observer_callback = FFI::C4DatabaseObserver.sequence_callback(async) do |seq, num_changes|
+        async.call do
+          changed
+          notify_observers(:commit, seq, num_changes)
+        end
+      end
+      @observer = FFI::C4DatabaseObserver.create(c4_database, @observer_callback)
     end
 
     def transaction(persist = true)
@@ -189,13 +196,6 @@ module CouchbaseLite
         yield
       ensure
         false_err { |e| FFI::c4db_endTransaction(c4_database, persist, e) }
-
-        @async.call do
-          changed
-          notify_observers(:commit)
-        end
-
-        true
       end
     end
 

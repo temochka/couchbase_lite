@@ -14,7 +14,7 @@ module CouchbaseLite
       database.delete_observer(self)
     end
 
-    def update(event)
+    def update(event, *_args)
       return unless event == :commit
 
       refreshed = @result.refresh
