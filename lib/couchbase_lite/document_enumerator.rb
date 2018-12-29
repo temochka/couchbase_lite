@@ -1,9 +1,16 @@
 module CouchbaseLite
   class DocumentEnumerator
+    DEFAULT_MAPPER = proc { |doc| doc.itself }
+
     include Enumerable
     include ErrorHandling
 
-    def initialize(database, since: 0, **options)
+    def initialize(database, since: 0, **options, &mapper)
+      @database = database
+      @options = options
+      @since = since
+      @mapper = mapper || DEFAULT_MAPPER
+
       c4_doc_enumerator = null_err do |e|
         FFI.c4db_enumerateChanges(database.c4_database,
                                   since,
@@ -22,6 +29,14 @@ module CouchbaseLite
       @enumerator.each(&block)
     end
 
+    def live(&block)
+      LiveResult.new(@database, self, &block)
+    end
+
+    def refresh
+      self.class.new(@database, since: @since, **@options, &@mapper)
+    end
+
     private
 
     def make_enumerator(c4_doc_enumerator)
@@ -35,7 +50,7 @@ module CouchbaseLite
 
           doc = Document.new(c4_doc)
 
-          docs << doc
+          docs << @mapper.call(doc)
         end
       end
     end

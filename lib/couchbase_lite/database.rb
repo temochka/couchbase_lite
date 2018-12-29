@@ -129,8 +129,8 @@ module CouchbaseLite
       end
     end
 
-    def documents(**options)
-      DocumentEnumerator.new(self, options)
+    def documents(**options, &block)
+      DocumentEnumerator.new(self, options, &block)
     end
 
     def conflicts(**options)
