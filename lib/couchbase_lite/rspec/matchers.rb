@@ -49,3 +49,24 @@ RSpec::Matchers.define :run_until do |_|
     @always = block
   end
 end
+
+RSpec::Matchers.define :have_side_effect do |_|
+  match do |block|
+    block.call
+    loop do
+      break if block_arg.call || timeout?
+      sleep 0.01
+    end
+    true
+  end
+
+  supports_block_expectations
+
+  def timeout?
+    @timeout && Time.now.to_i >= @timeout
+  end
+
+  chain :with_timeout do |timeout|
+    @timeout = Time.now.to_i + timeout
+  end
+end

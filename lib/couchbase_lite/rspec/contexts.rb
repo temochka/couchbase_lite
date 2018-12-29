@@ -44,3 +44,19 @@ RSpec.shared_context 'simple dataset' do |db_name = 'db', size = 20|
     records.each_with_index { |r, i| send(db_name).insert(i.to_s, r) }
   end
 end
+
+RSpec.shared_context 'revision conflicts' do |db_name = 'db'|
+  before do
+    db = public_send(db_name)
+
+    db.put('1', { foo: 'bar' })
+    db.put('1',
+           { foo: 'buz' },
+           existing_revision: true,
+           allow_conflict: true,
+           history: ['1-0b265579fcb1b06526a7649efae41c8812f4200d'],
+           remote_db_id: 1)
+  end
+
+  let(:conflicted_document) { db.get('1') }
+end
