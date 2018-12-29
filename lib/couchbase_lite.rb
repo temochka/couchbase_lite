@@ -87,6 +87,10 @@ module CouchbaseLite
       @logger ||= Logger.new(STDOUT, level: Logger::ERROR)
     end
     attr_writer :logger
+
+    def litecore_version
+      FFI.c4_getVersion.to_s
+    end
   end
 end
 

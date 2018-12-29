@@ -770,6 +770,11 @@ module CouchbaseLite
              :error, C4Error
     end
 
+
+    # /** A short version string. */
+    # C4StringResult c4_getVersion(void) C4API;
+    attach_function :c4_getVersion, [], C4StringResult.by_value
+
     attach_function :c4db_open, [C4String.by_value, C4DatabaseConfig.ptr, C4Error.ptr], :pointer
     attach_function :c4db_close, [:pointer, C4Error.ptr], :bool
     attach_function :c4db_free, [:pointer], :bool
