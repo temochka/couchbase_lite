@@ -187,7 +187,10 @@ RSpec.describe CouchbaseLite::Database do
 
       specify { expect(conflicts.count).to eq 1 }
 
-      it { is_expected.to match([{ body: { foo: 'bar' }, rev: String }, { body: { foo: 'buz' }, rev: String }]) }
+      specify do
+        is_expected.to match(id: conflict_id,
+                             conflicts: [{body: {foo: 'bar'}, rev: String}, {body: {foo: 'buz'}, rev: String}])
+      end
     end
   end
 

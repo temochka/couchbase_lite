@@ -134,7 +134,7 @@ module CouchbaseLite
     end
 
     def conflicts(**options)
-      documents(**options, only_conflicts: true, bodies: true).lazy.map { |doc| get_conflicts(doc) }
+      documents(**options, only_conflicts: true, bodies: true) { |doc| { id: doc.id, conflicts: get_conflicts(doc) } }
     end
 
     def get_conflicts(document)

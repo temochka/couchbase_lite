@@ -46,11 +46,13 @@ RSpec.shared_context 'simple dataset' do |db_name = 'db', size = 20|
 end
 
 RSpec.shared_context 'revision conflicts' do |db_name = 'db'|
+  let(:conflict_id) { '1' }
+
   before do
     db = public_send(db_name)
 
-    db.put('1', { foo: 'bar' })
-    db.put('1',
+    db.put(conflict_id, { foo: 'bar' })
+    db.put(conflict_id,
            { foo: 'buz' },
            existing_revision: true,
            allow_conflict: true,
@@ -58,5 +60,5 @@ RSpec.shared_context 'revision conflicts' do |db_name = 'db'|
            remote_db_id: 1)
   end
 
-  let(:conflicted_document) { db.get('1') }
+  let(:conflicted_document) { db.get(conflict_id) }
 end
