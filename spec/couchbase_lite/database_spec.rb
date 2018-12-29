@@ -262,17 +262,18 @@ RSpec.describe CouchbaseLite::Database do
         seqs << seq
       end
     end
-
-    before do
-      db.add_observer(observer, :call)
+    let(:operations) do
       db.insert(id, body)
       db.insert("#{id}_alt", body)
     end
 
+    before do
+      db.add_observer(observer, :call)
+    end
+
     context 'standard async method' do
       it 'asynchronously notifies observers within a reasonable amount of time' do
-        sleep 0.1
-        expect(changes.reduce(:+)).to eq 2
+        expect { operations }.to have_side_effect { changes.reduce(:+) == 2 }.with_timeout(5)
         expect(notifications.uniq).to eq %i(commit)
       end
     end
@@ -283,15 +284,17 @@ RSpec.describe CouchbaseLite::Database do
       let(:cblite_db_options) { { async: async_method } }
       let(:worker_loop) { Thread.new { loop { queue.pop.call } } }
 
+      before do
+        worker_loop
+      end
+
       after do
         worker_loop.exit
       end
 
       it 'uses provided async method to delay notifications until later' do
-        expect(queue.size).to eq 1
-        expect { worker_loop; sleep 0.1 }.
-          to change { notifications.size }.by(1).
-          and change { changes.reduce(0, :+) }.by(2)
+        expect { operations }.to have_side_effect { notifications.size == 1 }.with_timeout(5)
+        expect(changes.reduce(0, :+)).to eq 2
         expect(notifications.uniq).to eq %i(commit)
       end
     end

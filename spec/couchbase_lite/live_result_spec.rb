@@ -14,9 +14,7 @@ RSpec.describe CouchbaseLite::LiveResult do
         original = live.result
         expect(original).to be_a(result.class)
         expect(original.first).to eq('number' => 0)
-        db.update('0', number: 42)
-        sleep 0.1
-        expect(live.result).to_not eq(original)
+        expect { db.update('0', number: 42) }.to have_side_effect { live.result != original }.with_timeout(5)
         expect(live.result.first).to eq('number' => 1)
       end
     end
@@ -28,10 +26,10 @@ RSpec.describe CouchbaseLite::LiveResult do
       end
 
       it 'runs callback on every commit' do
-        db.delete('0')
-        sleep 0.1
-        db.delete('1')
-        sleep 0.1
+        2.times do |i|
+          original = live.result
+          expect { db.delete(i.to_s) }.to have_side_effect { live.result != original }.with_timeout(5)
+        end
         expect(snapshots).to eq [[0, 1, 2], [1, 2, 3], [2, 3, 4]]
       end
     end
