@@ -379,7 +379,8 @@ module CouchbaseLite
              :historyCount, :size_t,
              :save, :bool,
              :maxRevTreeDepth, :uint32,
-             :remoteDBID, :uint32
+             :remoteDBID, :uint32,
+             :allocedBody, C4SliceResult
     end
 
     # typedef C4_OPTIONS(uint16_t, C4EnumeratorFlags) {
