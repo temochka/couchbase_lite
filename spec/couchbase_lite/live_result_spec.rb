@@ -30,7 +30,7 @@ RSpec.describe CouchbaseLite::LiveResult do
           original = live.result
           expect { db.delete(i.to_s) }.to have_side_effect { live.result != original }.with_timeout(5)
         end
-        expect(snapshots).to eq [[0, 1, 2], [1, 2, 3], [2, 3, 4]]
+        expect(snapshots.uniq).to eq [[0, 1, 2], [1, 2, 3], [2, 3, 4]]
       end
     end
   end
