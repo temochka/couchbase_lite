@@ -1,3 +1,2 @@
 #!/bin/bash
-docker run -v $(pwd):/checkout -ti temochka/cblite-test:latest bash -c "cd /checkout; bin/setup && bundle exec rspec"
-
+docker run -v $(pwd):/checkout -ti temochka/cblite-test:${CBLITE_TAG:-latest} bash -c "cd /checkout; bin/setup && bundle exec rspec"

@@ -1,6 +1,8 @@
 FROM ubuntu:18.04 as build
 
 ARG CBLITE_REF=master
+ARG LITECORE_VERSION_STRING=2.1
+ENV LITECORE_VERSION_STRING=$LITECORE_VERSION_STRING
 
 RUN apt-get update && apt-get install -y build-essential cmake libc++-dev libc++abi-dev libicu-dev zlib1g-dev clang git libsqlite3-dev
 
