@@ -67,7 +67,7 @@ module CouchbaseLite
         faye_socket = Faye::WebSocket.new(env, nil, ping: HEARTBEAT_INTERVAL)
 
         url = URI::Generic.build(scheme: 'ws',
-                                 host: env['REMOTE_ADDR'],
+                                 host: cleanup_hostname(env['REMOTE_ADDR']),
                                  port: env['SERVER_PORT'],
                                  path: env['REQUEST_PATH'])
         ws = ReplicatorSocket.new(faye_socket) { |ref| build(url, ref) }
@@ -95,6 +95,12 @@ module CouchbaseLite
       factory[:requestClose] = REQUEST_CLOSE_REQUEST
       factory[:dispose] = DISPOSE_REQUEST
       factory
+    end
+
+    def cleanup_hostname(hostname)
+      return '127.0.0.1' unless hostname && hostname != '::1'
+
+      hostname
     end
   end
 
