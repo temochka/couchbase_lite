@@ -46,9 +46,9 @@ module CouchbaseLite
       end
     end
 
-    attr_accessor :socket
+    attr_accessor :socket, :options
 
-    def initialize(database, socket_factory: nil, url: nil, socket: nil)
+    def initialize(database, socket_factory: nil, url: nil, socket: nil, options: {})
       raise ArgumentError, 'Both url and socket cannot be nil.' if url.nil? && socket.nil?
       raise ArgumentError, 'Please provide a socket factory when url is specified.' if url && !socket_factory
       @database = database
@@ -57,6 +57,7 @@ module CouchbaseLite
       @running = false
       @is_server = !!socket
       @socket_factory = socket_factory
+      @options = options
     end
 
     def start
@@ -106,6 +107,7 @@ module CouchbaseLite
       p[:push] = server ? :kC4Passive : :kC4Continuous
       p[:pull] = server ? :kC4Passive : :kC4Continuous
       p[:socketFactory] = @socket_factory&.c4_socket_factory
+      p[:optionsDictFleece] = FFI::C4String.from_string(Fleece.dump(options)) if options && !options.empty?
       p
     end
   end

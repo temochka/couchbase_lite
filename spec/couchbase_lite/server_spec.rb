@@ -68,26 +68,59 @@ RSpec.describe CouchbaseLite::Server do
       db_replica.insert('42', replica_rev)
     end
 
-    it 'registers conflicts' do
-      replicator = CouchbaseLite::Replicator.new(db_replica,
-                                                 socket_factory: client_socket_factory,
-                                                 url: "ws://localhost:#{port}/db")
+    context 'without outgoing conflicts' do
+      it 'registers conflicts on the replica' do
+        replicator = CouchbaseLite::Replicator.new(db_replica,
+                                                   socket_factory: client_socket_factory,
+                                                   url: "ws://localhost:#{port}/db")
 
-      expect { replicator.start }.
-        to run_until { replicator.status.level == :idle && server_replicator.status.level == :idle }.
-          with_timeout(5).
-          and_then {
-            doc = db_replica.get('42')
-            expect(doc).to be_conflicted
+        expect { replicator.start }.
+          to run_until { replicator.status.level == :idle && server_replicator.status.level == :idle }.
+            with_timeout(5).
+            and_then {
+              server_doc = db.get('42')
+              expect(server_doc).to_not be_conflicted
 
-            conflicting_revs = db_replica.get_conflicts(doc)
-            expect(conflicting_revs.size).to eq 2
-            expect(conflicting_revs[0][:body]).to eq(replica_rev)
-            expect(conflicting_revs[1][:body]).to eq(master_rev)
+              doc = db_replica.get('42')
+              expect(doc).to be_conflicted
 
-            replicator.stop
-          }.
-          always { EM.stop }
+              conflicting_revs = db_replica.get_conflicts(doc)
+              expect(conflicting_revs.size).to eq 2
+              expect(conflicting_revs[0][:body]).to eq(replica_rev)
+              expect(conflicting_revs[1][:body]).to eq(master_rev)
+
+              replicator.stop
+            }.
+            always { EM.stop }
+      end
+    end
+
+    context 'with outgoing conflicts' do
+      it 'registers conflicts on both ends' do
+        replicator = CouchbaseLite::Replicator.new(db_replica,
+                                                   socket_factory: client_socket_factory,
+                                                   url: "ws://localhost:#{port}/db",
+                                                   options: { outgoingConflicts: true })
+
+        expect { replicator.start }.
+          to run_until { replicator.status.level == :idle && server_replicator.status.level == :idle }.
+            with_timeout(5).
+            and_then {
+              server_doc = db.get('42')
+              expect(server_doc).to be_conflicted
+
+              doc = db_replica.get('42')
+              expect(doc).to be_conflicted
+
+              conflicting_revs = db_replica.get_conflicts(doc)
+              expect(conflicting_revs.size).to eq 2
+              expect(conflicting_revs[0][:body]).to eq(replica_rev)
+              expect(conflicting_revs[1][:body]).to eq(master_rev)
+
+              replicator.stop
+            }.
+            always { EM.stop }
+      end
     end
   end
 

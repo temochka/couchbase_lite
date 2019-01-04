@@ -6,7 +6,7 @@ module CouchbaseLite
 
     attr_reader :db_resolver, :replications, :max_replications
 
-    def initialize(db_resolver = nil, max_replications: 100, &block)
+    def initialize(db_resolver: nil, replicator_options: {}, max_replications: 100, &block)
       @db_resolver = db_resolver || block
       raise ArgumentError, 'Please provide a database resolver.' unless @db_resolver
       @replications = []
@@ -19,7 +19,7 @@ module CouchbaseLite
       CouchbaseLite.logger.info(
         "server - #{env['REQUEST_METHOD']} #{env['REQUEST_PATH']} (#{env['REMOTE_ADDR']})")
       ws, response = @socket_factory.build_from_rack(env)
-      replicator = CouchbaseLite::Replicator.new(@db_resolver.call(env), socket: ws)
+      replicator = CouchbaseLite::Replicator.new(@db_resolver.call(env), socket: ws, options: @replicator_options)
       register(replicator)
       replicator.start
       response
