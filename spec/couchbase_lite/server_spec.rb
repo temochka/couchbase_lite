@@ -7,7 +7,7 @@ RSpec.describe CouchbaseLite::Server do
   include_context 'CBLite db', :db_replica
 
   subject(:server) { CouchbaseLite::Server.new { |_| db } }
-  let(:port) { 4666 }
+  let(:port) { 4668 }
   let(:client_socket_factory) { CouchbaseLite::ReplicatorSocketFactory.new(server: false) }
   let(:server_replicator) { server.replications.first }
 
