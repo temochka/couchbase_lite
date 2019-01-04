@@ -9,11 +9,11 @@ module CouchbaseLite
       JSON.parse(json.to_s, opts)
     end
 
-    def self.dump(data)
+    def self.dump(data, stringify: true)
       json = JSON.dump(data)
       c4_string = FFI::C4String.from_string(json)
       c4_slice = blank_err { |e| FFI.fldata_convert_json(c4_string, e) }
-      c4_slice.to_s
+      stringify ? c4_slice.to_s : c4_slice
     end
   end
 end
