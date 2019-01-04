@@ -17,11 +17,20 @@ end
 RSpec::Matchers.define :run_until do |_|
   match do |block|
     raise 'Event machine is not running.' unless EventMachine.reactor_running?
-    block.call
+
+    begin
+      block.call
+    rescue => e
+      EM.stop
+      raise e
+    end
+
     EventMachine.tick_loop do
       if block_arg.call || timeout?
         begin
           @and_then.call if @and_then
+          :stop
+        rescue
           :stop
         ensure
           @always.call if @always
